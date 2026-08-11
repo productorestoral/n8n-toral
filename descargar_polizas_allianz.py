@@ -58,45 +58,11 @@ def descargar_polizas():
 
             time.sleep(1)
 
-            # Clickear botón login - Intentar múltiples formas
-            print("   Buscando botón INICIAR SESIÓN...")
-
-            login_hecho = False
-            try:
-                # Intenta por :has-text
-                page.click("button:has-text('INICIAR SESIÓN')")
-                print("   ✅ Login iniciado (por has-text)")
-                login_hecho = True
-            except:
-                pass
-
-            if not login_hecho:
-                try:
-                    # Intenta por texto exacto
-                    page.click("button:has-text('Iniciar Sesión')")
-                    print("   ✅ Login iniciado (por Iniciar Sesión)")
-                    login_hecho = True
-                except:
-                    pass
-
-            if not login_hecho:
-                try:
-                    # Buscar botón por búsqueda de todos los botones
-                    buttons = page.query_selector_all('button')
-                    for btn in buttons:
-                        text = btn.text_content().strip().upper()
-                        if 'INICIAR' in text or 'SESION' in text:
-                            btn.click()
-                            print("   ✅ Login iniciado (por búsqueda de botones)")
-                            login_hecho = True
-                            break
-                except Exception as e:
-                    print(f"   ⚠️ Error en búsqueda de botones: {str(e)}")
-
-            if not login_hecho:
-                print("   ⚠️ No se encontró botón de login - verifica manualmente en el navegador")
-                print("   💡 Cuando hayas ingresado manualmente, presiona ENTER aquí...")
-                input()
+            # Login manual - el usuario hace click en el botón
+            print("   📍 Por favor, haz click en el botón 'INICIAR SESIÓN' en el navegador")
+            print("   💡 Los campos ya están completados. Solo necesitas hacer click en el botón.")
+            print("   ⏳ Presiona ENTER aquí cuando hayas hecho click y la página haya cargado...")
+            input()
 
             # Esperar a que cargue después del login
             time.sleep(5)
@@ -107,42 +73,11 @@ def descargar_polizas():
 
             # 3. BUSCAR MENU PRODUCCIÓN Y SUBMENÚ AGENTE
             print("\n📊 Navegando a Producción → AGENTE...")
-
-            # Primero buscar Producción
-            links = page.query_selector_all('a, button, [role="button"], span, div')
-            produccion_encontrada = False
-            for link in links:
-                text = link.text_content().lower().strip()
-                if text == 'producción' or text == 'produccion':
-                    try:
-                        link.click()
-                        print("   ✅ Producción seleccionada")
-                        produccion_encontrada = True
-                        break
-                    except:
-                        pass
-
-            if not produccion_encontrada:
-                print("   ⚠️ No se encontró Producción, intenta manualmente")
-
-            time.sleep(3)
-
-            # Buscar submenú AGENTE
-            links = page.query_selector_all('a, button, [role="button"], span, div, li')
-            agente_encontrado = False
-            for link in links:
-                text = link.text_content().lower().strip()
-                if text == 'agente':
-                    try:
-                        link.click()
-                        print("   ✅ Submenú AGENTE seleccionado")
-                        agente_encontrado = True
-                        break
-                    except:
-                        pass
-
-            if not agente_encontrado:
-                print("   ⚠️ No se encontró AGENTE, intenta manualmente")
+            print("   📍 Por favor:")
+            print("      1. Haz click en 'Producción'")
+            print("      2. Luego haz click en 'AGENTE'")
+            print("   ⏳ Presiona ENTER cuando estés en el menú AGENTE...")
+            input()
 
             time.sleep(2)
 
@@ -194,23 +129,9 @@ def descargar_polizas():
 
             # 5. PROCESAR DATOS
             print("\n🔄 Ejecutando Procesar Datos...")
-            buttons = page.query_selector_all('button, a, [role="button"]')
-            procesar_hecho = False
-            for btn in buttons:
-                text = btn.text_content().lower()
-                if 'procesar' in text and 'dato' in text:
-                    try:
-                        btn.click()
-                        print("   ✅ Procesar datos ejecutado")
-                        procesar_hecho = True
-                        break
-                    except:
-                        pass
-
-            if not procesar_hecho:
-                print("   ⚠️ No se encontró botón Procesar Datos, intenta manualmente")
-                print("   💡 Cuando hayas hecho click, presiona ENTER aquí...")
-                input()
+            print("   📍 Por favor, haz click en el botón 'PROCESAR DATOS' en la pantalla")
+            print("   ⏳ Presiona ENTER aquí cuando hayas hecho click y la tabla haya cargado...")
+            input()
 
             # Esperar a que carguen los datos
             time.sleep(5)
