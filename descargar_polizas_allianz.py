@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
 """
 Script para descargar pólizas de Allianz y guardarlas en Excel
-
-Instalación:
-    pip install playwright pandas openpyxl
-
-Uso:
-    python descargar_polizas_allianz.py
 """
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import sync_playwright
 import pandas as pd
 from datetime import datetime
 import time
@@ -17,8 +11,6 @@ import time
 URL_ALLIANZ = "https://net.allianz.com.ar/#/home"
 
 def descargar_polizas():
-    """Descarga pólizas de Allianz y las guarda en Excel"""
-
     print("🚀 Iniciando descarga de pólizas Allianz...\n")
 
     with sync_playwright() as p:
@@ -27,227 +19,96 @@ def descargar_polizas():
         page.set_viewport_size({"width": 1400, "height": 900})
 
         try:
-            # ABRIR ALLIANZ
-            print("=" * 70)
-            print("PASO 1: ABRIENDO ALLIANZ")
-            print("=" * 70)
-            print("🌐 Accediendo a https://net.allianz.com.ar...\n")
+            print("=" * 80)
+            print("ABRIENDO ALLIANZ")
+            print("=" * 80)
+            print("\n🌐 Abriendo https://net.allianz.com.ar...\n")
 
             page.goto(URL_ALLIANZ, wait_until="networkidle", timeout=30000)
             time.sleep(3)
 
-            # LOGIN MANUAL
-            print("=" * 70)
-            print("PASO 2: LOGIN")
-            print("=" * 70)
-            print("📍 Se abrió la página de Allianz")
-            print()
-            print("👉 AHORA TÚ (en el navegador):")
-            print("   1. Acepta las cookies si aparecen")
-            print("   2. Cierra cualquier banner que aparezca")
-            print("   3. Completa usuario y contraseña")
-            print("   4. Haz click en 'INICIAR SESIÓN'")
-            print("   5. Espera a que cargue")
-            print()
-            print("⏳ Cuando hayas ingresado, presiona ENTER aquí...")
-            print("=" * 70)
+            print("=" * 80)
+            print("COMPLETA MANUALMENTE EN EL NAVEGADOR")
+            print("=" * 80)
+            print("\n👉 En el navegador que se abrió:")
+            print("   1. Acepta cookies (si aparecen)")
+            print("   2. Cierra banners (si aparecen)")
+            print("   3. Usuario: eduardo3")
+            print("   4. Contraseña: eduardo10")
+            print("   5. Click en INICIAR SESIÓN")
+            print("   6. Ve a Producción → AGENTE")
+            print("   7. Completa filtros (si quieres)")
+            print("   8. Click en PROCESAR DATOS")
+            print("   9. Espera a que cargue la tabla\n")
+
+            print("⏳ Cuando veas la tabla de pólizas en el navegador,")
+            print("   presiona ENTER aquí para que extraiga los datos...\n")
+            print("=" * 80)
             input()
 
-            time.sleep(5)
-
-            # NAVEGAR A PRODUCCIÓN → AGENTE
-            print("\n" + "=" * 70)
-            print("PASO 3: NAVEGAR A PRODUCCIÓN → AGENTE")
-            print("=" * 70)
-            print("👉 AHORA TÚ (en el navegador):")
-            print("   1. Haz click en 'PRODUCCIÓN' (menú izquierdo)")
-            print("   2. Haz click en 'AGENTE' (submenú)")
-            print("   3. Espera a que cargue")
-            print()
-            print("⏳ Cuando estés en la pantalla AGENTE, presiona ENTER aquí...")
-            print("=" * 70)
-            input()
-
-            time.sleep(3)
-
-            # CONFIGURAR FILTROS (AUTOMÁTICO)
-            print("\n" + "=" * 70)
-            print("PASO 4: CONFIGURAR FILTROS")
-            print("=" * 70)
-            print("🔧 Configurando automáticamente...")
-
-            # Organizador
-            try:
-                all_inputs = page.query_selector_all('input')
-                for inp in all_inputs:
-                    try:
-                        label = inp.evaluate('el => el.parentElement?.textContent || el.placeholder || ""').lower()
-                        if 'organizador' in label or 'agente' in label:
-                            inp.fill('TORAL EDUARDO')
-                            print("   ✅ Organizador: TORAL EDUARDO")
-                            break
-                    except:
-                        pass
-            except Exception as e:
-                print(f"   ⚠️ Error configurando organizador: {e}")
-
-            time.sleep(1)
-
-            # Tipo de póliza
-            try:
-                selects = page.query_selector_all('select')
-                for select in selects:
-                    try:
-                        options_text = select.evaluate('''sel =>
-                            Array.from(sel.querySelectorAll('option')).map(o => o.textContent.toLowerCase())
-                        ''')
-
-                        if any('hogar' in o or 'combinado' in o for o in options_text):
-                            option_elements = select.query_selector_all('option')
-                            for opt in option_elements:
-                                opt_text = opt.text_content().lower()
-                                if 'hogar' in opt_text or 'combinado' in opt_text:
-                                    opt.evaluate('o => o.selected = true')
-                                    select.evaluate('sel => sel.dispatchEvent(new Event("change", {bubbles: true}))')
-                                    print("   ✅ Tipo de póliza: Hogar/Combinado")
-                                    break
-                            break
-                    except:
-                        pass
-            except Exception as e:
-                print(f"   ⚠️ Error configurando tipo: {e}")
-
-            time.sleep(2)
-
-            # PROCESAR DATOS (MANUAL)
-            print("\n" + "=" * 70)
-            print("PASO 5: PROCESAR DATOS")
-            print("=" * 70)
-            print("👉 AHORA TÚ (en el navegador):")
-            print("   1. Haz click en el botón 'PROCESAR DATOS'")
-            print("   2. Espera a que cargue la tabla de pólizas")
-            print()
-            print("⏳ Cuando veas la tabla con las pólizas, presiona ENTER aquí...")
-            print("=" * 70)
-            input()
-
-            time.sleep(5)
-
-            # EXTRAER TABLA
-            print("\n" + "=" * 70)
-            print("PASO 6: EXTRAYENDO DATOS")
-            print("=" * 70)
-
-            polizas = []
+            print("\n✅ Extrayendo datos de la tabla...\n")
 
             # Buscar tabla
             tables = page.query_selector_all('table')
 
             if len(tables) == 0:
-                print("❌ No se encontró tabla de pólizas")
-                print()
-                print("Posibles causas:")
-                print("  - No hiciste click en PROCESAR DATOS")
-                print("  - Los filtros no se configuraron correctamente")
-                print("  - La tabla todavía está cargando")
-                print()
-                print("El navegador seguirá abierto. Revisa qué pasó.")
-            else:
-                tabla = tables[0]
-                filas = tabla.query_selector_all('tbody tr')
-                total_filas = len(filas)
+                print("❌ No se encontró tabla")
+                print("\n💡 Verifica que:")
+                print("   - Completaste el login")
+                print("   - Navegaste a Producción > AGENTE")
+                print("   - Hiciste click en PROCESAR DATOS")
+                print("   - La tabla está visible\n")
+                return None
 
-                print(f"✅ Encontradas {total_filas} pólizas")
-                print("🔄 Extrayendo datos...\n")
+            tabla = tables[0]
+            filas = tabla.query_selector_all('tbody tr')
+            total = len(filas)
 
-                for i, fila in enumerate(filas):
-                    try:
-                        celdas = fila.query_selector_all('td')
+            print(f"✅ Encontradas {total} pólizas\n")
 
-                        if len(celdas) >= 6:
-                            numero_poliza = celdas[0].text_content().strip()
-                            nombre_asegurado = celdas[1].text_content().strip()
-                            ubicacion = celdas[2].text_content().strip()
-                            suma_incendio = celdas[3].text_content().strip()
-                            vigencia_desde = celdas[4].text_content().strip()
-                            vigencia_hasta = celdas[5].text_content().strip()
+            polizas = []
 
-                            # Buscar ícono de mapa
-                            map_icon = fila.query_selector('[alt*="Argentina"], [title*="Argentina"], img[src*="argentina"]')
-                            detalles_suma = suma_incendio
+            for i, fila in enumerate(filas):
+                try:
+                    celdas = fila.query_selector_all('td')
 
-                            if map_icon:
-                                try:
-                                    print(f"   🔍 Póliza {numero_poliza}: accediendo detalles...")
-                                    map_icon.click()
-                                    time.sleep(3)
+                    if len(celdas) >= 6:
+                        poliza = {
+                            'Número de Póliza': celdas[0].text_content().strip(),
+                            'Nombre Asegurado': celdas[1].text_content().strip(),
+                            'Ubicación del Riesgo': celdas[2].text_content().strip(),
+                            'Suma Incendio Edificio': celdas[3].text_content().strip(),
+                            'Vigencia Desde': celdas[4].text_content().strip(),
+                            'Vigencia Hasta': celdas[5].text_content().strip(),
+                        }
+                        polizas.append(poliza)
 
-                                    try:
-                                        page.wait_for_load_state("networkidle", timeout=8000)
-                                    except:
-                                        pass
+                        if (i + 1) % 10 == 0:
+                            print(f"   {i + 1}/{total} pólizas...", end="\r")
 
-                                    # Buscar suma asegurada en detalles
-                                    cells = page.query_selector_all('td, div[role="cell"], span')
-                                    for j, cell in enumerate(cells):
-                                        cell_text = cell.text_content().lower()
-                                        if 'suma' in cell_text and 'asegurada' in cell_text:
-                                            if j + 1 < len(cells):
-                                                detalles_suma = cells[j + 1].text_content().strip()
-                                            break
+                except Exception as e:
+                    print(f"   ⚠️ Error en fila {i}: {e}")
+                    continue
 
-                                    # Volver
-                                    page.go_back()
-                                    time.sleep(2)
+            print(f"\n✅ Extracción completada\n")
 
-                                    tabla = page.query_selector('table')
-                                    if tabla:
-                                        filas = tabla.query_selector_all('tbody tr')
-
-                                except Exception as e:
-                                    print(f"      ⚠️ Error: {str(e)}")
-                                    try:
-                                        page.go_back()
-                                        time.sleep(2)
-                                    except:
-                                        pass
-
-                            poliza = {
-                                'Número de Póliza': numero_poliza,
-                                'Nombre Asegurado': nombre_asegurado,
-                                'Ubicación del Riesgo': ubicacion,
-                                'Suma Incendio Edificio': detalles_suma,
-                                'Vigencia Desde': vigencia_desde,
-                                'Vigencia Hasta': vigencia_hasta,
-                            }
-                            polizas.append(poliza)
-
-                            if (i + 1) % 5 == 0:
-                                print(f"   ✅ {i + 1}/{total_filas} pólizas...", end="\r")
-
-                    except Exception as e:
-                        print(f"   ⚠️ Error en fila {i}: {str(e)}")
-                        continue
-
-                print(f"\n\n✅ Extracción completada: {len(polizas)} pólizas\n")
-
-            # CREAR EXCEL
+            # Generar Excel
             if polizas:
-                print("=" * 70)
-                print("PASO 7: GENERANDO EXCEL")
-                print("=" * 70)
+                print("=" * 80)
+                print("GENERANDO EXCEL")
+                print("=" * 80 + "\n")
 
                 df = pd.DataFrame(polizas)
-
                 fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
                 nombre_archivo = f"Allianz_Polizas_{fecha}.xlsx"
 
                 df.to_excel(nombre_archivo, index=False, sheet_name='Pólizas')
 
-                print(f"\n✅ Excel guardado: {nombre_archivo}")
+                print(f"✅ Excel guardado: {nombre_archivo}")
                 print(f"📊 Total de pólizas: {len(polizas)}\n")
+
                 print("Primeras pólizas:")
-                print(df.head().to_string())
+                print(df.head().to_string() + "\n")
 
                 return nombre_archivo
             else:
@@ -255,35 +116,32 @@ def descargar_polizas():
                 return None
 
         except Exception as e:
-            print(f"\n❌ Error: {str(e)}")
+            print(f"\n❌ Error: {e}")
             import traceback
             traceback.print_exc()
             return None
 
         finally:
-            # NO cerrar automáticamente
-            print("\n" + "=" * 70)
+            print("\n" + "=" * 80)
             print("✅ TERMINADO")
-            print("=" * 70)
+            print("=" * 80)
             print("El navegador seguirá abierto.")
-            print("Presiona ENTER aquí para cerrar...")
-            print("=" * 70)
+            print("Presiona ENTER para cerrar...\n")
+
             try:
                 input()
             except:
                 pass
 
             browser.close()
-            print("\n✅ Navegador cerrado")
+            print("✅ Cerrado\n")
 
 if __name__ == "__main__":
     try:
         archivo = descargar_polizas()
         if archivo:
-            print(f"\n🎉 ¡Listo! Archivo guardado: {archivo}")
-        else:
-            print("\n⚠️ No se pudo crear el archivo")
+            print(f"🎉 ¡Listo! Archivo: {archivo}\n")
     except KeyboardInterrupt:
-        print("\n⚠️ Proceso interrumpido por el usuario")
+        print("\n⚠️ Cancelado")
     except Exception as e:
-        print(f"\n❌ Error fatal: {str(e)}")
+        print(f"\n❌ Error: {e}")
