@@ -3,84 +3,117 @@
 Script para descargar pólizas de Allianz y guardarlas en Excel
 """
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 import pandas as pd
 from datetime import datetime
 import time
 import sys
+import traceback
 
 URL_ALLIANZ = "https://net.allianz.com.ar/#/home"
 
-def descargar_polizas():
+def main():
     print("🚀 Iniciando descarga de pólizas Allianz...\n")
 
+    playwright = None
     browser = None
+
     try:
-        p = sync_playwright().start()
-        browser = p.chromium.launch(headless=False)
+        # Iniciar Playwright
+        print("📍 Iniciando Playwright...")
+        playwright = sync_playwright().start()
+        print("✅ Playwright iniciado\n")
+
+        # Abrir navegador
+        print("📍 Abriendo navegador Chromium...")
+        browser = playwright.chromium.launch(headless=False)
+        print("✅ Navegador abierto\n")
+
+        # Crear página
+        print("📍 Creando página...")
         page = browser.new_page()
         page.set_viewport_size({"width": 1400, "height": 900})
+        print("✅ Página creada\n")
 
+        # Abrir Allianz
         print("=" * 80)
-        print("ABRIENDO ALLIANZ")
+        print("PASO 1: ABRIENDO ALLIANZ")
         print("=" * 80)
         print("\n🌐 Abriendo https://net.allianz.com.ar...\n")
 
-        page.goto(URL_ALLIANZ, wait_until="networkidle", timeout=30000)
+        try:
+            page.goto(URL_ALLIANZ, wait_until="networkidle", timeout=30000)
+            print("✅ Página cargada\n")
+        except PlaywrightTimeoutError:
+            print("⚠️ Timeout, pero continuamos...\n")
+        except Exception as e:
+            print(f"❌ Error abriendo página: {e}\n")
+            raise
+
         time.sleep(3)
 
         print("=" * 80)
-        print("COMPLETA MANUALMENTE EN EL NAVEGADOR")
+        print("PASO 2: COMPLETA TODO MANUALMENTE EN EL NAVEGADOR")
         print("=" * 80)
-        print("\n👉 En el navegador que se abrió:")
-        print("   1. Acepta cookies (si aparecen)")
-        print("   2. Cierra banners (si aparecen)")
-        print("   3. Usuario: eduardo3")
-        print("   4. Contraseña: eduardo10")
-        print("   5. Click en INICIAR SESIÓN")
-        print("   6. Ve a Producción → AGENTE")
-        print("   7. Selecciona Organizador: TORAL EDUARDO")
-        print("   8. Selecciona Tipo: Hogar o Combinado Familiar")
-        print("   9. Click en PROCESAR DATOS")
-        print("   10. Espera a que cargue la tabla\n")
+        print("\n👉 Cosas que hacer en el navegador:")
+        print("   ✓ Acepta cookies (si aparecen)")
+        print("   ✓ Cierra banners (si aparecen)")
+        print("   ✓ Usuario: eduardo3")
+        print("   ✓ Contraseña: eduardo10")
+        print("   ✓ Click en INICIAR SESIÓN")
+        print("   ✓ Ve a Producción → AGENTE")
+        print("   ✓ Organizador: TORAL EDUARDO")
+        print("   ✓ Tipo: Hogar o Combinado Familiar")
+        print("   ✓ Click en PROCESAR DATOS")
+        print("   ✓ Espera a ver la tabla de pólizas\n")
 
-        print("⏳ Cuando veas la tabla de pólizas en el navegador,")
-        print("   presiona ENTER aquí para que extraiga los datos...\n")
         print("=" * 80)
+        print("⏳ Cuando veas la tabla, presiona ENTER aquí...")
+        print("=" * 80 + "\n")
 
-        respuesta = input()
-        print("\n✅ Extrayendo datos de la tabla...\n")
+        input()
+
+        print("\n✅ Continuando con extracción...\n")
+        time.sleep(2)
 
         # Buscar tabla
-        print("🔍 Buscando tabla...")
-        tables = page.query_selector_all('table')
-        print(f"   Tablas encontradas: {len(tables)}")
+        print("🔍 Buscando tabla de pólizas...")
+        try:
+            tables = page.query_selector_all('table')
+            print(f"   Encontradas: {len(tables)} tablas\n")
+        except Exception as e:
+            print(f"❌ Error buscando tablas: {e}\n")
+            return None
 
         if len(tables) == 0:
-            print("\n❌ No se encontró tabla")
+            print("❌ No se encontró tabla")
             print("\n💡 Verifica que:")
             print("   - Completaste el login")
-            print("   - Navegaste a Producción > AGENTE")
-            print("   - Seleccionaste los filtros")
+            print("   - Estás en Producción > AGENTE")
+            print("   - Completaste los filtros")
             print("   - Hiciste click en PROCESAR DATOS")
-            print("   - La tabla está visible\n")
+            print("   - Ves la tabla en el navegador\n")
             return None
 
-        print("✅ Tabla encontrada\n")
         tabla = tables[0]
 
-        print("🔍 Buscando filas...")
-        filas = tabla.query_selector_all('tbody tr')
-        total = len(filas)
-        print(f"   Filas encontradas: {total}\n")
-
-        if total == 0:
-            print("❌ La tabla no tiene filas")
+        print("🔍 Buscando filas en la tabla...")
+        try:
+            filas = tabla.query_selector_all('tbody tr')
+            total = len(filas)
+            print(f"   Encontradas: {total} filas\n")
+        except Exception as e:
+            print(f"❌ Error buscando filas: {e}\n")
             return None
 
-        print(f"✅ Extrayendo {total} pólizas...\n")
+        if total == 0:
+            print("❌ La tabla no tiene datos\n")
+            return None
+
+        print(f"📋 Extrayendo {total} pólizas...\n")
 
         polizas = []
+        errores = 0
 
         for i, fila in enumerate(filas):
             try:
@@ -98,13 +131,16 @@ def descargar_polizas():
                     polizas.append(poliza)
 
                     if (i + 1) % 10 == 0:
-                        print(f"   ✅ {i + 1}/{total} pólizas procesadas")
+                        print(f"   ✅ {i + 1}/{total}")
 
             except Exception as e:
-                print(f"   ⚠️ Error en fila {i}: {e}")
-                continue
+                errores += 1
+                if errores <= 3:
+                    print(f"   ⚠️ Fila {i}: {e}")
 
-        print(f"\n✅ Extracción completada: {len(polizas)} pólizas\n")
+        print(f"\n✅ Extracción completada")
+        print(f"   Pólizas: {len(polizas)}")
+        print(f"   Errores: {errores}\n")
 
         # Generar Excel
         if polizas:
@@ -112,35 +148,45 @@ def descargar_polizas():
             print("GENERANDO EXCEL")
             print("=" * 80 + "\n")
 
-            df = pd.DataFrame(polizas)
-            fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
-            nombre_archivo = f"Allianz_Polizas_{fecha}.xlsx"
+            try:
+                df = pd.DataFrame(polizas)
+                fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
+                nombre_archivo = f"Allianz_Polizas_{fecha}.xlsx"
 
-            df.to_excel(nombre_archivo, index=False, sheet_name='Pólizas')
+                df.to_excel(nombre_archivo, index=False, sheet_name='Pólizas')
 
-            print(f"✅ Excel guardado: {nombre_archivo}")
-            print(f"📊 Total de pólizas: {len(polizas)}\n")
+                print(f"✅ Excel guardado: {nombre_archivo}")
+                print(f"📊 Total: {len(polizas)} pólizas\n")
+                print("Primeras 5 pólizas:")
+                print(df.head().to_string() + "\n")
 
-            print("Primeras pólizas:")
-            print(df.head().to_string() + "\n")
+                return nombre_archivo
 
-            return nombre_archivo
+            except Exception as e:
+                print(f"❌ Error generando Excel: {e}\n")
+                return None
         else:
-            print("❌ No se extrajeron pólizas")
+            print("❌ No se extrajeron pólizas\n")
             return None
 
+    except KeyboardInterrupt:
+        print("\n⚠️ Cancelado por el usuario\n")
+        return None
+
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
-        print(f"\nTipo: {type(e).__name__}")
-        import traceback
+        print(f"\n❌ ERROR: {e}\n")
+        print("Tipo:", type(e).__name__)
+        print("\nDetalles:")
         traceback.print_exc()
+        print()
         return None
 
     finally:
+        print("=" * 80)
+        print("CERRANDO")
+        print("=" * 80 + "\n")
+
         if browser:
-            print("\n" + "=" * 80)
-            print("✅ TERMINADO")
-            print("=" * 80)
             print("El navegador seguirá abierto.")
             print("Presiona ENTER para cerrar...\n")
 
@@ -149,20 +195,25 @@ def descargar_polizas():
             except:
                 pass
 
-            print("\nCerrando navegador...")
-            browser.close()
-            print("✅ Cerrado\n")
+            print("Cerrando navegador...")
+            try:
+                browser.close()
+                print("✅ Navegador cerrado\n")
+            except Exception as e:
+                print(f"⚠️ Error cerrando: {e}\n")
+
+        if playwright:
+            try:
+                playwright.stop()
+                print("✅ Playwright cerrado\n")
+            except Exception as e:
+                print(f"⚠️ Error: {e}\n")
 
 if __name__ == "__main__":
-    try:
-        archivo = descargar_polizas()
-        if archivo:
-            print(f"🎉 ¡Listo! Archivo: {archivo}\n")
-        else:
-            print("\n⚠️ No se pudo crear el archivo\n")
-    except KeyboardInterrupt:
-        print("\n⚠️ Cancelado")
-    except Exception as e:
-        print(f"\n❌ Error fatal: {e}")
-        import traceback
-        traceback.print_exc()
+    print("\n")
+    archivo = main()
+
+    if archivo:
+        print(f"🎉 ¡Éxito! Archivo: {archivo}\n")
+    else:
+        print("⚠️ No se creó el archivo\n")
