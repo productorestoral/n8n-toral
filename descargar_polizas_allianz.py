@@ -36,17 +36,24 @@ def descargar_polizas():
         try:
             # 1. ABRIR ALLIANZ
             print("🌐 Accediendo a Allianz...")
-            page.goto(URL_ALLIANZ, wait_until="networkidle", timeout=30000)
-            time.sleep(3)
+            print("   ⏳ Esperando que cargue la página (esto tarda un poco)...\n")
+            try:
+                page.goto(URL_ALLIANZ, wait_until="networkidle", timeout=30000)
+            except:
+                print("   ⚠️ Timeout, pero continuamos...")
+
+            time.sleep(5)
 
             # 2. LOGIN
-            print("🔐 Realizando login...")
+            print("🔐 Completando datos de login...\n")
 
             # Llenar usuario
             user_inputs = page.query_selector_all('input[type="text"]')
             if len(user_inputs) > 0:
                 user_inputs[0].fill(USUARIO)
                 print(f"   ✅ Usuario ingresado: {USUARIO}")
+            else:
+                print("   ⚠️ No se encontró campo de usuario")
 
             time.sleep(1)
 
@@ -54,32 +61,51 @@ def descargar_polizas():
             pass_inputs = page.query_selector_all('input[type="password"]')
             if len(pass_inputs) > 0:
                 pass_inputs[0].fill(PASSWORD)
-                print(f"   ✅ Contraseña ingresada")
+                print(f"   ✅ Contraseña ingresada\n")
+            else:
+                print("   ⚠️ No se encontró campo de contraseña\n")
 
-            time.sleep(1)
+            time.sleep(2)
 
             # Login manual - el usuario hace click en el botón
-            print("   📍 Por favor, haz click en el botón 'INICIAR SESIÓN' en el navegador")
-            print("   💡 Los campos ya están completados. Solo necesitas hacer click en el botón.")
-            print("   ⏳ Presiona ENTER aquí cuando hayas hecho click y la página haya cargado...")
+            print("=" * 60)
+            print("🔐 PASO 1: LOGIN")
+            print("=" * 60)
+            print("   ✅ Los campos de usuario y contraseña ya están completados")
+            print("   ")
+            print("   👉 AHORA TÚ:")
+            print("      1. Mira el navegador que se abrió")
+            print("      2. Haz click en el botón 'INICIAR SESIÓN'")
+            print("      3. Espera a que cargue la siguiente página")
+            print("   ")
+            print("   ⏳ Cuando veas que pasó la página de login,")
+            print("      presiona ENTER aquí...")
+            print("=" * 60)
             input()
 
             # Esperar a que cargue después del login
-            time.sleep(5)
+            print("\n⏳ Esperando que cargue la página después del login...")
+            time.sleep(8)
             try:
                 page.wait_for_load_state("networkidle", timeout=10000)
             except PlaywrightTimeoutError:
                 print("   ⚠️ Timeout esperando carga, continuando...")
 
             # 3. BUSCAR MENU PRODUCCIÓN Y SUBMENÚ AGENTE
-            print("\n📊 Navegando a Producción → AGENTE...")
-            print("   📍 Por favor:")
-            print("      1. Haz click en 'Producción'")
-            print("      2. Luego haz click en 'AGENTE'")
-            print("   ⏳ Presiona ENTER cuando estés en el menú AGENTE...")
+            print("\n" + "=" * 60)
+            print("📊 PASO 2: NAVEGAR A PRODUCCIÓN → AGENTE")
+            print("=" * 60)
+            print("   👉 AHORA TÚ:")
+            print("      1. Haz click en 'PRODUCCIÓN' (en el menú izquierdo)")
+            print("      2. Espera a que cargue")
+            print("      3. Haz click en 'AGENTE' (submenú)")
+            print("      4. Espera a que cargue la página de AGENTE")
+            print("   ")
+            print("   ⏳ Presiona ENTER cuando estés viendo la pantalla de AGENTE...")
+            print("=" * 60)
             input()
 
-            time.sleep(2)
+            time.sleep(3)
 
             # 4. CONFIGURAR FILTROS
             print("\n⚙️ Configurando filtros...")
@@ -128,9 +154,20 @@ def descargar_polizas():
             time.sleep(1)
 
             # 5. PROCESAR DATOS
-            print("\n🔄 Ejecutando Procesar Datos...")
-            print("   📍 Por favor, haz click en el botón 'PROCESAR DATOS' en la pantalla")
-            print("   ⏳ Presiona ENTER aquí cuando hayas hecho click y la tabla haya cargado...")
+            print("\n" + "=" * 60)
+            print("🔄 PASO 4: PROCESAR DATOS")
+            print("=" * 60)
+            print("   ✅ Los filtros ya están configurados:")
+            print(f"      - Organizador: {ORGANIZADOR}")
+            print("      - Tipo de póliza: Hogar o Combinado Familiar")
+            print("   ")
+            print("   👉 AHORA TÚ:")
+            print("      1. Haz click en el botón 'PROCESAR DATOS'")
+            print("      2. Espera a que se cargue la tabla con las pólizas")
+            print("      3. Verás un listado de pólizas")
+            print("   ")
+            print("   ⏳ Presiona ENTER cuando veas la tabla de pólizas...")
+            print("=" * 60)
             input()
 
             # Esperar a que carguen los datos
