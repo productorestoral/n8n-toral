@@ -171,14 +171,17 @@ def descargar_polizas():
             input()
 
             # Esperar a que carguen los datos
-            time.sleep(5)
+            print("\n⏳ Esperando que cargue la tabla de pólizas...")
+            time.sleep(8)
             try:
                 page.wait_for_load_state("networkidle", timeout=10000)
             except PlaywrightTimeoutError:
-                print("   ⚠️ Timeout esperando carga")
+                print("   ⚠️ Timeout esperando carga, continuando de todas formas...")
 
             # 6. EXTRAER TABLA DE PÓLIZAS Y NAVEGAR DETALLES
-            print("\n📋 Extrayendo pólizas y datos detallados...")
+            print("\n" + "=" * 60)
+            print("📋 PASO 5: EXTRAYENDO PÓLIZAS")
+            print("=" * 60)
 
             polizas = []
 
@@ -186,7 +189,13 @@ def descargar_polizas():
             tables = page.query_selector_all('table')
             if len(tables) == 0:
                 print("   ❌ No se encontró tabla de pólizas")
-                print("   💡 Verifica que completaste correctamente los filtros y hiciste click en Procesar Datos")
+                print("   ")
+                print("   💡 Posibles causas:")
+                print("      1. Los filtros no se configuraron correctamente")
+                print("      2. No hiciste click en 'PROCESAR DATOS'")
+                print("      3. La tabla todavía está cargando")
+                print("   ")
+                print("   💡 Verifica en el navegador si ves la tabla de pólizas")
             else:
                 tabla = tables[0]
                 filas = tabla.query_selector_all('tbody tr')
@@ -307,8 +316,19 @@ def descargar_polizas():
             return None
 
         finally:
-            # Cerrar navegador
-            time.sleep(2)
+            # NO cerrar navegador automáticamente - dejar que el usuario lo cierre
+            print("\n" + "=" * 60)
+            print("✅ PROCESO COMPLETADO")
+            print("=" * 60)
+            print("   El navegador seguirá abierto para que puedas revisar")
+            print("   Presiona ENTER aquí para cerrar el navegador...")
+            print("=" * 60)
+            try:
+                input()
+            except:
+                pass
+
+            time.sleep(1)
             browser.close()
             print("\n✅ Navegador cerrado")
 
