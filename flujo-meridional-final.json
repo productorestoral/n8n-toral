@@ -16,12 +16,11 @@
         "options": {
           "response": {
             "response": {
-              "nativeDocument": false
+              "fullResponse": true,
+              "responseFormat": "text"
             }
           }
-        },
-        "responseFormat": "text",
-        "outputPropertyName": "data"
+        }
       },
       "id": "2",
       "name": "GET Login Page",
@@ -31,7 +30,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first();\nconst html = response.data || response.body || JSON.stringify(response);\n\nif (!html || typeof html !== 'string') {\n  return { error: 'No HTML data received', received: typeof html };\n}\n\n// Buscar el token CSRF usando múltiples patrones\nlet tokenMatch = html.match(/name=[\"']__RequestVerificationToken[\"'][^>]*value=[\"']([^\"']+)[\"']/i);\nif (!tokenMatch) {\n  tokenMatch = html.match(/value=[\"']([^\"']+)[\"'][^>]*name=[\"']__RequestVerificationToken[\"']/i);\n}\nif (!tokenMatch) {\n  tokenMatch = html.match(/__RequestVerificationToken['\"]\\s*,?\\s*value['\"]\\s*=\\s*['\"]([^'\"]+)['\"]/);\n}\nif (!tokenMatch) {\n  tokenMatch = html.match(/__RequestVerificationToken.*?value=\"([^\"]+)\"/);\n}\n\nif (!tokenMatch || !tokenMatch[1]) {\n  return { error: 'Token CSRF no encontrado', htmlLength: html.length };\n}\n\nreturn { csrfToken: tokenMatch[1] };"
+        "jsCode": "const response = $input.first();\nconst html = response.body || response.data || JSON.stringify(response);\n\nif (!html || typeof html !== 'string') {\n  return { error: 'No HTML data received', received: typeof html };\n}\n\n// Buscar el token CSRF usando múltiples patrones\nlet tokenMatch = html.match(/name=[\"']__RequestVerificationToken[\"'][^>]*value=[\"']([^\"']+)[\"']/i);\nif (!tokenMatch) {\n  tokenMatch = html.match(/value=[\"']([^\"']+)[\"'][^>]*name=[\"']__RequestVerificationToken[\"']/i);\n}\nif (!tokenMatch) {\n  tokenMatch = html.match(/__RequestVerificationToken['\"]\\s*,?\\s*value['\"]\\s*=\\s*['\"]([^'\"]+)['\"]/);\n}\nif (!tokenMatch) {\n  tokenMatch = html.match(/__RequestVerificationToken.*?value=\"([^\"]+)\"/);\n}\n\nif (!tokenMatch || !tokenMatch[1]) {\n  return { error: 'Token CSRF no encontrado', htmlLength: html.length };\n}\n\nreturn { csrfToken: tokenMatch[1] };"
       },
       "id": "3",
       "name": "Extraer Token CSRF",
@@ -63,14 +62,27 @@
               "value": "Etoral59s"
             },
             {
+              "name": "correo"
+            },
+            {
               "name": "__RequestVerificationToken",
               "value": "={{$json.csrfToken}}"
             }
           ]
         },
         "options": {
-          "followRedirects": true,
-          "splitIntoItems": false
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
         },
         "sendBody": true,
         "bodyContentType": "form-urlencoded"
@@ -86,10 +98,13 @@
         "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos",
         "method": "GET",
         "options": {
-          "followRedirects": true
-        },
-        "responseFormat": "text",
-        "outputPropertyName": "data"
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
       },
       "id": "5",
       "name": "GET Pólizas Page",
@@ -99,7 +114,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Acceder a los datos en el formato correcto\nconst response = $input.first();\nlet html = response.data || response.body || response;\n\nif (!html || typeof html !== 'string') {\n  return { \n    success: false, \n    error: 'No se recibió HTML válido',\n    received: typeof html,\n    total: 0,\n    incluidas: 0,\n    excluidas: 0,\n    polizas: [],\n    debug: JSON.stringify(Object.keys(response)).substring(0, 200)\n  };\n}\n\n// Buscar la tabla en el HTML\nconst tableMatch = html.match(/<table[^>]*>([\\s\\S]*?)<\\/table>/);\nif (!tableMatch) {\n  return { \n    success: false, \n    error: 'Tabla no encontrada en el HTML',\n    total: 0,\n    incluidas: 0,\n    excluidas: 0,\n    polizas: []\n  };\n}\n\nconst polizas = [];\nconst excluidas = [];\n\n// Expresión regular para extraer filas de tabla\nconst rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet rowMatch;\n\nwhile ((rowMatch = rowRegex.exec(tableMatch[1])) !== null) {\n  const row = rowMatch[1];\n  \n  // Extraer celdas\n  const cellRegex = /<td[^>]*>([\\s\\S]*?)<\\/td>/g;\n  const cells = [];\n  let cellMatch;\n  \n  while ((cellMatch = cellRegex.exec(row)) !== null) {\n    let content = cellMatch[1]\n      .replace(/<[^>]*>/g, '') // Remover tags HTML\n      .trim();\n    cells.push(content);\n  }\n  \n  if (cells.length < 6) continue;\n  \n  const ramo = cells[1] || '';\n  const poliza = cells[2] || '';\n  const endoso = cells[3] || '';\n  const motivo = cells[5] || '';\n  const productor = cells[6] || '';\n  \n  // Filtros de exclusión\n  const motivos_excluir = ['Cambio forma de pago'];\n  const productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\n  \n  let excluir = false;\n  \n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) {\n    excluir = true;\n  }\n  \n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) {\n    excluir = true;\n  }\n  \n  if (!excluir && poliza) {\n    polizas.push({\n      ramo,\n      poliza,\n      endoso,\n      productor,\n      motivo\n    });\n  } else if (excluir && poliza) {\n    excluidas.push({\n      poliza,\n      productor,\n      razon: motivo\n    });\n  }\n}\n\nreturn {\n  success: true,\n  total: polizas.length + excluidas.length,\n  incluidas: polizas.length,\n  excluidas: excluidas.length,\n  polizas: polizas,\n  polizasExcluidas: excluidas\n};"
+        "jsCode": "// Acceder a los datos en el formato correcto\nconst response = $input.first();\nlet html = response.body || response.data || response;\n\nif (!html || typeof html !== 'string') {\n  return { \n    success: false, \n    error: 'No se recibió HTML válido',\n    received: typeof html,\n    total: 0,\n    incluidas: 0,\n    excluidas: 0,\n    polizas: [],\n    debug: JSON.stringify(Object.keys(response)).substring(0, 200)\n  };\n}\n\n// Buscar la tabla en el HTML\nconst tableMatch = html.match(/<table[^>]*>([\\s\\S]*?)<\\/table>/);\nif (!tableMatch) {\n  return { \n    success: false, \n    error: 'Tabla no encontrada en el HTML',\n    total: 0,\n    incluidas: 0,\n    excluidas: 0,\n    polizas: []\n  };\n}\n\nconst polizas = [];\nconst excluidas = [];\n\n// Expresión regular para extraer filas de tabla\nconst rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet rowMatch;\n\nwhile ((rowMatch = rowRegex.exec(tableMatch[1])) !== null) {\n  const row = rowMatch[1];\n  \n  // Extraer celdas\n  const cellRegex = /<td[^>]*>([\\s\\S]*?)<\\/td>/g;\n  const cells = [];\n  let cellMatch;\n  \n  while ((cellMatch = cellRegex.exec(row)) !== null) {\n    let content = cellMatch[1]\n      .replace(/<[^>]*>/g, '') // Remover tags HTML\n      .trim();\n    cells.push(content);\n  }\n  \n  if (cells.length < 6) continue;\n  \n  const ramo = cells[1] || '';\n  const poliza = cells[2] || '';\n  const endoso = cells[3] || '';\n  const motivo = cells[5] || '';\n  const productor = cells[6] || '';\n  \n  // Filtros de exclusión\n  const motivos_excluir = ['Cambio forma de pago'];\n  const productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\n  \n  let excluir = false;\n  \n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) {\n    excluir = true;\n  }\n  \n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) {\n    excluir = true;\n  }\n  \n  if (!excluir && poliza) {\n    polizas.push({\n      ramo,\n      poliza,\n      endoso,\n      productor,\n      motivo\n    });\n  } else if (excluir && poliza) {\n    excluidas.push({\n      poliza,\n      productor,\n      razon: motivo\n    });\n  }\n}\n\nreturn {\n  success: true,\n  total: polizas.length + excluidas.length,\n  incluidas: polizas.length,\n  excluidas: excluidas.length,\n  polizas: polizas,\n  polizasExcluidas: excluidas\n};"
       },
       "id": "6",
       "name": "Procesar y Filtrar Datos",
