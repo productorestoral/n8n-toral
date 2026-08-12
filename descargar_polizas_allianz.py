@@ -43,16 +43,42 @@ try:
     print("El script esperará la tabla (máximo 5 minutos)...\n")
     print("Searching...", end="", flush=True)
 
-    # Loop esperando tabla
+    # Loop esperando tabla (buscar de múltiples formas)
     encontrada = False
+    tabla = None
+    filas = None
+
     for segundo in range(300):
         try:
+            # Intentar 1: table HTML normal
             tables = page.query_selector_all('table')
             if tables:
-                filas = tables[0].query_selector_all('tbody tr')
+                tabla = tables[0]
+                filas = tabla.query_selector_all('tbody tr')
                 if filas:
                     encontrada = True
                     break
+
+            # Intentar 2: grid role
+            if not encontrada:
+                grids = page.query_selector_all('[role="grid"]')
+                if grids:
+                    tabla = grids[0]
+                    filas = tabla.query_selector_all('[role="row"]')
+                    if len(filas) > 1:  # más de 1 fila (ignorar header)
+                        encontrada = True
+                        break
+
+            # Intentar 3: cualquier tbody
+            if not encontrada:
+                tbodies = page.query_selector_all('tbody')
+                if tbodies:
+                    filas = tbodies[0].query_selector_all('tr')
+                    if filas:
+                        tabla = tbodies[0].evaluate('el => el.closest("table")')
+                        encontrada = True
+                        break
+
         except:
             pass
 
