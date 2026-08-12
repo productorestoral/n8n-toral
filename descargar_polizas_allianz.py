@@ -41,6 +41,9 @@ try:
     print("  • Espera la tabla\n")
 
     print("El script esperará la tabla (máximo 5 minutos)...\n")
+    print("Esperando 5 segundos a que la página cargue completamente...")
+    time.sleep(5)
+
     print("Searching...", end="", flush=True)
 
     # Loop esperando tabla (buscar de múltiples formas)
