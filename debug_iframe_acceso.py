@@ -28,6 +28,14 @@ with sync_playwright() as p:
     print("\nVerificando acceso al iframe...\n")
     time.sleep(2)
 
+    # Esperar a que el iframe cargue
+    print("Esperando a que el iframe cargue completamente...")
+    try:
+        page.locator('iframe[src*="pkg_aznet_container"]').wait_for(timeout=10000)
+        print("✓ Iframe listo\n")
+    except:
+        print("✗ Timeout esperando iframe\n")
+
     # Método 1: Usando page.locator
     print("Método 1: page.locator")
     try:
@@ -61,9 +69,18 @@ with sync_playwright() as p:
             print(f"  Total divs: {divs.count()}")
 
             # Obtener contenido de texto
-            texto = frame_locator.locator('body').text_content()
-            print(f"\n  Contenido de texto en iframe (primeros 200 chars):")
-            print(f"  {texto[:200]}\n")
+            try:
+                texto = frame_locator.locator('body').text_content()
+                print(f"\n  Contenido de texto en iframe (primeros 300 chars):")
+                print(f"  {texto[:300]}\n")
+            except:
+                print("  ✗ No se puede obtener texto\n")
+
+            # Buscar iframes dentro del iframe
+            iframes_internos = frame_locator.locator('iframe')
+            print(f"  Iframes dentro del iframe: {iframes_internos.count()}")
+            if iframes_internos.count() > 0:
+                print("  ⚠️  Hay iframes anidados - la tabla podría estar dentro de ellos")
 
     except Exception as e:
         print(f"  ✗ Error: {e}\n")
