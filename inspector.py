@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""
-Inspector: Detecta la estructura de la tabla en Allianz
-"""
-
 from playwright.sync_api import sync_playwright
 import time
 
 print("\n" + "=" * 80)
-print("INSPECTOR DE ALLIANZ")
+print("INSPECTOR")
 print("=" * 80 + "\n")
 
 with sync_playwright() as p:
@@ -19,86 +15,47 @@ with sync_playwright() as p:
     page.goto("https://net.allianz.com.ar/#/home")
 
     print("=" * 80)
-    print("COMPLETÁ TODO EN EL NAVEGADOR:")
-    print("=" * 80 + "\n")
-    print("  • Login")
-    print("  • Producción → AGENTE")
-    print("  • Filtros")
-    print("  • PROCESAR DATOS\n")
-
+    print("COMPLETÁ TODO EN NAVEGADOR:")
+    print("=" * 80)
+    print("\n• Login")
+    print("• Producción → AGENTE")
+    print("• Filtros")
+    print("• PROCESAR DATOS\n")
     print("Presiona ENTER cuando veas la tabla\n")
 
-    try:
-        input()
-    except KeyboardInterrupt:
-        print("\n\n" + "=" * 80)
-        print("ANALIZANDO TABLA...")
-        print("=" * 80 + "\n")
+    input()
 
-        try:
-            # Buscar todo lo que podría ser tabla
-            print("Buscando elementos...\n")
+    print("\nAnalizando...\n")
 
-            # 1. Tablas HTML
-            tables = page.query_selector_all('table')
-        print(f"<table> encontradas: {len(tables)}")
-        if tables:
-            for i, t in enumerate(tables):
-                rows = t.query_selector_all('tr')
-                print(f"  Tabla {i}: {len(rows)} filas")
+    # Buscar tabla
+    tables = page.query_selector_all('table')
+    print(f"Tables encontradas: {len(tables)}")
 
-        # 2. Grids
-        grids = page.query_selector_all('[role="grid"]')
-        print(f"\n[role='grid']: {len(grids)}")
-        if grids:
-            for i, g in enumerate(grids):
-                rows = g.query_selector_all('[role="row"]')
-                print(f"  Grid {i}: {len(rows)} filas")
+    grids = page.query_selector_all('[role="grid"]')
+    print(f"Grids encontradas: {len(grids)}")
 
-        # 3. Tabindex tables
-        divs_role_table = page.query_selector_all('div[role="table"]')
-        print(f"\ndiv[role='table']: {len(divs_role_table)}")
-        if divs_role_table:
-            for i, d in enumerate(divs_role_table):
-                rows = d.query_selector_all('[role="row"]')
-                print(f"  Tabla {i}: {len(rows)} filas")
+    tbodies = page.query_selector_all('tbody')
+    print(f"Tbodies encontradas: {len(tbodies)}")
 
-        # 4. Datos
-        print("\n" + "=" * 80)
-        print("BUSCANDO DATOS...")
-        print("=" * 80 + "\n")
+    cells = page.query_selector_all('td')
+    print(f"Celdas TD encontradas: {len(cells)}\n")
 
-        # Intentar obtener los primeros datos
-        todas_las_celdas = page.query_selector_all('td, [role="cell"]')
-        print(f"Celdas encontradas: {len(todas_las_celdas)}\n")
+    # Si hay tabla
+    if tables:
+        print("Filas en primera tabla:")
+        rows = tables[0].query_selector_all('tr')
+        print(f"  Total: {len(rows)}")
+        print(f"  Filas con tbody: {len(tables[0].query_selector_all('tbody tr'))}\n")
 
-        if todas_las_celdas:
-            print("Primeras 10 celdas:\n")
-            for i, celda in enumerate(todas_las_celdas[:10]):
-                texto = celda.text_content().strip()[:50]
-                print(f"  {i}: {texto}")
+    if cells:
+        print("Primeras 5 celdas:")
+        for i, cell in enumerate(cells[:5]):
+            texto = cell.text_content().strip()[:40]
+            print(f"  {i}: {texto}")
 
-        # 5. Ver si hay datos en divs
-        print("\n" + "=" * 80)
-        print("ESTRUCTURA HTML (primeros 2000 caracteres):")
-        print("=" * 80 + "\n")
-        html = page.content()
-        # Buscar sección con datos
-        if 'tbody' in html:
-            idx = html.find('tbody')
-            print(html[max(0, idx-100):idx+500])
-        elif 'grid' in html.lower():
-            idx = html.lower().find('grid')
-            print(html[max(0, idx-100):idx+500])
-        else:
-            print(html[:1000])
+    print("\n" + "=" * 80)
+    print("Listo. Presiona ENTER para cerrar")
+    print("=" * 80 + "\n")
 
-            print("\n\n" + "=" * 80)
-            print("LISTO")
-            print("=" * 80 + "\n")
-            print("Copia esta información y pégala.\n")
-
-        except Exception as e:
-            print(f"Error: {e}\n")
-
-        browser.close()
+    input()
+    browser.close()
