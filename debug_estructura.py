@@ -82,6 +82,28 @@ with sync_playwright() as p:
             tbody_like = frame.query_selector_all('div[class*="row"], div[class*="table-row"], div[class*="tbody"]')
             if tbody_like:
                 print(f"Frame {frame_idx}: {len(tbody_like)} divs con clases de fila")
+                for i, row_div in enumerate(tbody_like[:3]):
+                    clase = row_div.get_attribute('class')
+                    texto = row_div.text_content().strip()[:150]
+                    print(f"  Fila {i}: clase='{clase}'")
+                    print(f"           texto='{texto}'")
+
+                    # Buscar divs dentro que actúen como celdas
+                    celdas = row_div.query_selector_all('div')
+                    print(f"           {len(celdas)} divs internos")
+
+            # Buscar todos los divs y sus clases
+            todos_divs = frame.query_selector_all('div')
+            clases_unicas = set()
+            for div in todos_divs:
+                clase = div.get_attribute('class')
+                if clase and ('row' in clase.lower() or 'cell' in clase.lower() or 'table' in clase.lower()):
+                    clases_unicas.add(clase)
+
+            if clases_unicas:
+                print(f"Frame {frame_idx}: Clases CSS con 'row', 'cell' o 'table':")
+                for clase in sorted(list(clases_unicas))[:5]:
+                    print(f"  - {clase}")
 
             print()
 
