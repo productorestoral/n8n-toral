@@ -26,21 +26,21 @@ with sync_playwright() as p:
     print("  • Filtros")
     print("  • PROCESAR DATOS\n")
 
-    print("Presiona Ctrl+C cuando veas la tabla\n")
+    print("Presiona ENTER cuando veas la tabla\n")
 
     try:
-        while True:
-            time.sleep(1)
+        input()
     except KeyboardInterrupt:
         print("\n\n" + "=" * 80)
         print("ANALIZANDO TABLA...")
         print("=" * 80 + "\n")
 
-        # Buscar todo lo que podría ser tabla
-        print("Buscando elementos...\n")
+        try:
+            # Buscar todo lo que podría ser tabla
+            print("Buscando elementos...\n")
 
-        # 1. Tablas HTML
-        tables = page.query_selector_all('table')
+            # 1. Tablas HTML
+            tables = page.query_selector_all('table')
         print(f"<table> encontradas: {len(tables)}")
         if tables:
             for i, t in enumerate(tables):
@@ -93,9 +93,12 @@ with sync_playwright() as p:
         else:
             print(html[:1000])
 
-        print("\n\n" + "=" * 80)
-        print("LISTO")
-        print("=" * 80 + "\n")
-        print("Copia esta información y pégala.\n")
+            print("\n\n" + "=" * 80)
+            print("LISTO")
+            print("=" * 80 + "\n")
+            print("Copia esta información y pégala.\n")
+
+        except Exception as e:
+            print(f"Error: {e}\n")
 
         browser.close()
