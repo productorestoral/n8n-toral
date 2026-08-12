@@ -1,0 +1,200 @@
+{
+  "name": "Scraper Meridional - Pólizas a Google Drive (HTTP v3 - Corregido)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Trigger Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://ws8.meridionalnet.com.ar/Account/Login",
+        "method": "GET",
+        "options": {
+          "response": {
+            "response": {
+              "nativeDocument": false
+            }
+          }
+        },
+        "responseFormat": "text",
+        "outputPropertyName": "data"
+      },
+      "id": "2",
+      "name": "GET Login Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first();\nconst html = response.data || response.body || JSON.stringify(response);\n\nif (!html || typeof html !== 'string') {\n  return { error: 'No HTML data received', received: typeof html };\n}\n\n// Buscar el token CSRF usando múltiples patrones\nlet tokenMatch = html.match(/name=[\"']__RequestVerificationToken[\"'][^>]*value=[\"']([^\"']+)[\"']/i);\nif (!tokenMatch) {\n  tokenMatch = html.match(/value=[\"']([^\"']+)[\"'][^>]*name=[\"']__RequestVerificationToken[\"']/i);\n}\nif (!tokenMatch) {\n  tokenMatch = html.match(/__RequestVerificationToken['\"]\\s*,?\\s*value['\"]\\s*=\\s*['\"]([^'\"]+)['\"]/);\n}\nif (!tokenMatch) {\n  tokenMatch = html.match(/__RequestVerificationToken.*?value=\"([^\"]+)\"/);\n}\n\nif (!tokenMatch || !tokenMatch[1]) {\n  return { error: 'Token CSRF no encontrado', htmlLength: html.length };\n}\n\nreturn { csrfToken: tokenMatch[1] };"
+      },
+      "id": "3",
+      "name": "Extraer Token CSRF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://ws8.meridionalnet.com.ar/Account/Login",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "bodyParametersUi": "keyvalue",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Usuario",
+              "value": "ESTORAL"
+            },
+            {
+              "name": "password",
+              "value": "Etoral59s"
+            },
+            {
+              "name": "__RequestVerificationToken",
+              "value": "={{$json.csrfToken}}"
+            }
+          ]
+        },
+        "options": {
+          "followRedirects": true,
+          "splitIntoItems": false
+        },
+        "sendBody": true,
+        "bodyContentType": "form-urlencoded"
+      },
+      "id": "4",
+      "name": "POST Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos",
+        "method": "GET",
+        "options": {
+          "followRedirects": true
+        },
+        "responseFormat": "text",
+        "outputPropertyName": "data"
+      },
+      "id": "5",
+      "name": "GET Pólizas Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Acceder a los datos en el formato correcto\nconst response = $input.first();\nlet html = response.data || response.body || response;\n\nif (!html || typeof html !== 'string') {\n  return { \n    success: false, \n    error: 'No se recibió HTML válido',\n    received: typeof html,\n    total: 0,\n    incluidas: 0,\n    excluidas: 0,\n    polizas: [],\n    debug: JSON.stringify(Object.keys(response)).substring(0, 200)\n  };\n}\n\n// Buscar la tabla en el HTML\nconst tableMatch = html.match(/<table[^>]*>([\\s\\S]*?)<\\/table>/);\nif (!tableMatch) {\n  return { \n    success: false, \n    error: 'Tabla no encontrada en el HTML',\n    total: 0,\n    incluidas: 0,\n    excluidas: 0,\n    polizas: []\n  };\n}\n\nconst polizas = [];\nconst excluidas = [];\n\n// Expresión regular para extraer filas de tabla\nconst rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet rowMatch;\n\nwhile ((rowMatch = rowRegex.exec(tableMatch[1])) !== null) {\n  const row = rowMatch[1];\n  \n  // Extraer celdas\n  const cellRegex = /<td[^>]*>([\\s\\S]*?)<\\/td>/g;\n  const cells = [];\n  let cellMatch;\n  \n  while ((cellMatch = cellRegex.exec(row)) !== null) {\n    let content = cellMatch[1]\n      .replace(/<[^>]*>/g, '') // Remover tags HTML\n      .trim();\n    cells.push(content);\n  }\n  \n  if (cells.length < 6) continue;\n  \n  const ramo = cells[1] || '';\n  const poliza = cells[2] || '';\n  const endoso = cells[3] || '';\n  const motivo = cells[5] || '';\n  const productor = cells[6] || '';\n  \n  // Filtros de exclusión\n  const motivos_excluir = ['Cambio forma de pago'];\n  const productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\n  \n  let excluir = false;\n  \n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) {\n    excluir = true;\n  }\n  \n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) {\n    excluir = true;\n  }\n  \n  if (!excluir && poliza) {\n    polizas.push({\n      ramo,\n      poliza,\n      endoso,\n      productor,\n      motivo\n    });\n  } else if (excluir && poliza) {\n    excluidas.push({\n      poliza,\n      productor,\n      razon: motivo\n    });\n  }\n}\n\nreturn {\n  success: true,\n  total: polizas.length + excluidas.length,\n  incluidas: polizas.length,\n  excluidas: excluidas.length,\n  polizas: polizas,\n  polizasExcluidas: excluidas\n};"
+      },
+      "id": "6",
+      "name": "Procesar y Filtrar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "upload",
+        "parentId": {
+          "mode": "id",
+          "value": "root"
+        },
+        "fileName": "=polizas_meridional_{{$now.toFormat('yyyy-MM-dd')}}.xlsx"
+      },
+      "id": "7",
+      "name": "Google Drive Upload",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1450, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": "google_drive_oauth2"
+      }
+    }
+  ],
+  "connections": {
+    "Trigger Manual": {
+      "main": [
+        [
+          {
+            "node": "GET Login Page",
+            "branch": 0,
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "GET Login Page": {
+      "main": [
+        [
+          {
+            "node": "Extraer Token CSRF",
+            "branch": 0,
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Extraer Token CSRF": {
+      "main": [
+        [
+          {
+            "node": "POST Login",
+            "branch": 0,
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "POST Login": {
+      "main": [
+        [
+          {
+            "node": "GET Pólizas Page",
+            "branch": 0,
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "GET Pólizas Page": {
+      "main": [
+        [
+          {
+            "node": "Procesar y Filtrar Datos",
+            "branch": 0,
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Procesar y Filtrar Datos": {
+      "main": [
+        [
+          {
+            "node": "Google Drive Upload",
+            "branch": 0,
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}
