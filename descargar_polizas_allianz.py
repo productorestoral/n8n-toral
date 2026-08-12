@@ -46,83 +46,43 @@ try:
 
     print("Searching...", end="", flush=True)
 
-    # Loop esperando tabla (buscar de múltiples formas)
+    # Loop esperando tabla
     encontrada = False
-    tabla = None
     filas = None
-    frame_usado = None
 
     for segundo in range(300):
         try:
-            # Intentar 1: table HTML normal en página principal
-            tables = page.query_selector_all('table')
-            if tables:
-                tabla = tables[0]
-                filas = tabla.query_selector_all('tbody tr')
-                if filas:
-                    encontrada = True
-                    break
+            # Buscar el iframe HTML embebido
+            iframe_locator = page.locator('iframe[src*="pkg_aznet_container"]')
+            if iframe_locator.count() > 0:
+                # Acceder al contenido del iframe
+                frame_content = iframe_locator.frame_locator(":scope")
 
-            # Intentar 2: grid role en página principal
-            if not encontrada:
-                grids = page.query_selector_all('[role="grid"]')
-                if grids:
-                    tabla = grids[0]
-                    filas = tabla.query_selector_all('[role="row"]')
-                    if len(filas) > 1:
+                # Intentar 1: Buscar table HTML normal
+                tables = frame_content.locator('table')
+                if tables.count() > 0:
+                    tabla = tables.first
+                    filas_locator = tabla.locator('tbody tr')
+                    if filas_locator.count() > 0:
+                        filas = filas_locator
                         encontrada = True
                         break
 
-            # Intentar 3: cualquier tbody en página principal
-            if not encontrada:
-                tbodies = page.query_selector_all('tbody')
-                if tbodies:
-                    filas = tbodies[0].query_selector_all('tr')
-                    if filas:
-                        tabla = tbodies[0].evaluate('el => el.closest("table")')
+                # Intentar 2: Buscar role="row"
+                if not encontrada:
+                    rows = frame_content.locator('[role="row"]')
+                    if rows.count() > 1:
+                        filas = rows
                         encontrada = True
                         break
 
-            # Intentar 4: Buscar en iframes
-            if not encontrada:
-                frames = page.frames
-                for frame_idx, frame in enumerate(frames):
-                    try:
-                        # Buscar table en iframe
-                        tables_frame = frame.query_selector_all('table')
-                        if tables_frame:
-                            tabla = tables_frame[0]
-                            filas = tabla.query_selector_all('tbody tr')
-                            if filas:
-                                encontrada = True
-                                frame_usado = frame
-                                break
-
-                        # Buscar role="grid" en iframe
-                        if not encontrada:
-                            grids_frame = frame.query_selector_all('[role="grid"]')
-                            if grids_frame:
-                                tabla = grids_frame[0]
-                                filas = tabla.query_selector_all('[role="row"]')
-                                if len(filas) > 1:
-                                    encontrada = True
-                                    frame_usado = frame
-                                    break
-
-                        # Buscar role="row" en iframe
-                        if not encontrada:
-                            rows_frame = frame.query_selector_all('[role="row"]')
-                            if len(rows_frame) > 1:
-                                filas = rows_frame[1:]  # Saltar header
-                                encontrada = True
-                                frame_usado = frame
-                                break
-
-                    except:
-                        pass
-
-                if encontrada:
-                    break
+                # Intentar 3: Buscar divs con clases de fila
+                if not encontrada:
+                    row_divs = frame_content.locator('div[class*="row"]')
+                    if row_divs.count() > 1:
+                        filas = row_divs
+                        encontrada = True
+                        break
 
         except:
             pass
@@ -148,39 +108,46 @@ try:
     print("EXTRAYENDO:")
     print("=" * 80 + "\n")
 
-    total = len(filas)
-
+    total = filas.count()
     print(f"Filas: {total}\n")
 
     polizas = []
-    for i, fila in enumerate(filas):
+    for i in range(total):
         try:
-            # Intentar extraer como tabla HTML (td)
-            celdas = fila.query_selector_all('td')
+            fila = filas.nth(i)
+            texto_fila = fila.text_content().strip()
 
-            # Si no hay td, intentar extraer como rol="cell" o rol="gridcell"
-            if not celdas:
-                celdas = fila.query_selector_all('[role="cell"], [role="gridcell"]')
-
-            # Si aún no hay celdas, intentar usar divs dentro de la fila
-            if not celdas:
-                celdas = fila.query_selector_all('div')
-
-            if len(celdas) >= 6:
-                polizas.append({
-                    'Número de Póliza': celdas[0].text_content().strip(),
-                    'Nombre Asegurado': celdas[1].text_content().strip(),
-                    'Ubicación del Riesgo': celdas[2].text_content().strip(),
-                    'Suma Incendio Edificio': celdas[3].text_content().strip(),
-                    'Vigencia Desde': celdas[4].text_content().strip(),
-                    'Vigencia Hasta': celdas[5].text_content().strip(),
-                })
+            # Buscar celdas (td o divs que actúen como celdas)
+            celdas_td = fila.locator('td')
+            if celdas_td.count() > 0:
+                # Es una tabla HTML normal
+                if celdas_td.count() >= 6:
+                    polizas.append({
+                        'Número de Póliza': celdas_td.nth(0).text_content().strip(),
+                        'Nombre Asegurado': celdas_td.nth(1).text_content().strip(),
+                        'Ubicación del Riesgo': celdas_td.nth(2).text_content().strip(),
+                        'Suma Incendio Edificio': celdas_td.nth(3).text_content().strip(),
+                        'Vigencia Desde': celdas_td.nth(4).text_content().strip(),
+                        'Vigencia Hasta': celdas_td.nth(5).text_content().strip(),
+                    })
+            else:
+                # Intentar extraer de role="cell"
+                celdas = fila.locator('[role="cell"], [role="gridcell"]')
+                if celdas.count() >= 6:
+                    polizas.append({
+                        'Número de Póliza': celdas.nth(0).text_content().strip(),
+                        'Nombre Asegurado': celdas.nth(1).text_content().strip(),
+                        'Ubicación del Riesgo': celdas.nth(2).text_content().strip(),
+                        'Suma Incendio Edificio': celdas.nth(3).text_content().strip(),
+                        'Vigencia Desde': celdas.nth(4).text_content().strip(),
+                        'Vigencia Hasta': celdas.nth(5).text_content().strip(),
+                    })
 
             if (i + 1) % 10 == 0:
                 print(f"  {i + 1}/{total}")
 
         except Exception as e:
-            print(f"  Error en fila {i + 1}: {e}")
+            pass
 
     print(f"\n✓ Extracción: {len(polizas)} pólizas\n")
 
