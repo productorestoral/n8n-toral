@@ -50,10 +50,11 @@ try:
     encontrada = False
     tabla = None
     filas = None
+    frame_usado = None
 
     for segundo in range(300):
         try:
-            # Intentar 1: table HTML normal
+            # Intentar 1: table HTML normal en página principal
             tables = page.query_selector_all('table')
             if tables:
                 tabla = tables[0]
@@ -62,17 +63,17 @@ try:
                     encontrada = True
                     break
 
-            # Intentar 2: grid role
+            # Intentar 2: grid role en página principal
             if not encontrada:
                 grids = page.query_selector_all('[role="grid"]')
                 if grids:
                     tabla = grids[0]
                     filas = tabla.query_selector_all('[role="row"]')
-                    if len(filas) > 1:  # más de 1 fila (ignorar header)
+                    if len(filas) > 1:
                         encontrada = True
                         break
 
-            # Intentar 3: cualquier tbody
+            # Intentar 3: cualquier tbody en página principal
             if not encontrada:
                 tbodies = page.query_selector_all('tbody')
                 if tbodies:
@@ -81,6 +82,47 @@ try:
                         tabla = tbodies[0].evaluate('el => el.closest("table")')
                         encontrada = True
                         break
+
+            # Intentar 4: Buscar en iframes
+            if not encontrada:
+                frames = page.frames
+                for frame_idx, frame in enumerate(frames):
+                    try:
+                        # Buscar table en iframe
+                        tables_frame = frame.query_selector_all('table')
+                        if tables_frame:
+                            tabla = tables_frame[0]
+                            filas = tabla.query_selector_all('tbody tr')
+                            if filas:
+                                encontrada = True
+                                frame_usado = frame
+                                break
+
+                        # Buscar role="grid" en iframe
+                        if not encontrada:
+                            grids_frame = frame.query_selector_all('[role="grid"]')
+                            if grids_frame:
+                                tabla = grids_frame[0]
+                                filas = tabla.query_selector_all('[role="row"]')
+                                if len(filas) > 1:
+                                    encontrada = True
+                                    frame_usado = frame
+                                    break
+
+                        # Buscar role="row" en iframe
+                        if not encontrada:
+                            rows_frame = frame.query_selector_all('[role="row"]')
+                            if len(rows_frame) > 1:
+                                filas = rows_frame[1:]  # Saltar header
+                                encontrada = True
+                                frame_usado = frame
+                                break
+
+                    except:
+                        pass
+
+                if encontrada:
+                    break
 
         except:
             pass
@@ -106,27 +148,39 @@ try:
     print("EXTRAYENDO:")
     print("=" * 80 + "\n")
 
-    tabla = tables[0]
-    filas = tabla.query_selector_all('tbody tr')
     total = len(filas)
 
     print(f"Filas: {total}\n")
 
     polizas = []
     for i, fila in enumerate(filas):
-        celdas = fila.query_selector_all('td')
-        if len(celdas) >= 6:
-            polizas.append({
-                'Número de Póliza': celdas[0].text_content().strip(),
-                'Nombre Asegurado': celdas[1].text_content().strip(),
-                'Ubicación del Riesgo': celdas[2].text_content().strip(),
-                'Suma Incendio Edificio': celdas[3].text_content().strip(),
-                'Vigencia Desde': celdas[4].text_content().strip(),
-                'Vigencia Hasta': celdas[5].text_content().strip(),
-            })
+        try:
+            # Intentar extraer como tabla HTML (td)
+            celdas = fila.query_selector_all('td')
 
-        if (i + 1) % 10 == 0:
-            print(f"  {i + 1}/{total}")
+            # Si no hay td, intentar extraer como rol="cell" o rol="gridcell"
+            if not celdas:
+                celdas = fila.query_selector_all('[role="cell"], [role="gridcell"]')
+
+            # Si aún no hay celdas, intentar usar divs dentro de la fila
+            if not celdas:
+                celdas = fila.query_selector_all('div')
+
+            if len(celdas) >= 6:
+                polizas.append({
+                    'Número de Póliza': celdas[0].text_content().strip(),
+                    'Nombre Asegurado': celdas[1].text_content().strip(),
+                    'Ubicación del Riesgo': celdas[2].text_content().strip(),
+                    'Suma Incendio Edificio': celdas[3].text_content().strip(),
+                    'Vigencia Desde': celdas[4].text_content().strip(),
+                    'Vigencia Hasta': celdas[5].text_content().strip(),
+                })
+
+            if (i + 1) % 10 == 0:
+                print(f"  {i + 1}/{total}")
+
+        except Exception as e:
+            print(f"  Error en fila {i + 1}: {e}")
 
     print(f"\n✓ Extracción: {len(polizas)} pólizas\n")
 
