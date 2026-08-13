@@ -103,10 +103,16 @@
             {"name": "FechaVigenciaDesde", "value": "={{$('Calcular Fechas').first().json.vigencia_desde}}"},
             {"name": "FechaVigenciaHasta", "value": "={{$('Calcular Fechas').first().json.vigencia_hasta}}"},
             {"name": "RamoId", "value": "={{$('Calcular Fechas').first().json.grupoRamoId}}"},
+            {"name": "Poliza", "value": ""},
+            {"name": "Productor", "value": ""},
+            {"name": "ApellidoRazonSocial", "value": ""},
+            {"name": "Documento", "value": ""},
+            {"name": "Patente", "value": ""},
+            {"name": "NroPropiesta", "value": ""},
+            {"name": "NroPropuestaExterna", "value": ""},
             {"name": "TopeRegistros", "value": "5000"},
-            {"name": "VisualizaPolizasRenovadas", "value": "true"},
-            {"name": "VisualizaPolizasAnuladas", "value": "false"},
-            {"name": "PoseeRenovacionEmitidaYAnulada", "value": "false"}
+            {"name": "skip", "value": "0"},
+            {"name": "take", "value": "50"}
           ]
         },
         "options": {
