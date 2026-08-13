@@ -79,38 +79,28 @@
     },
     {
       "parameters": {
-        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read",
-        "method": "POST",
+        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos",
+        "method": "GET",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Cookie", "value": "={{$json.cookie}}"},
-            {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
-          ]
-        },
-        "bodyParametersUi": "keyvalue",
-        "bodyParameters": {
-          "parameters": [
-            {"name": "Tipo", "value": "Endosos"},
-            {"name": "RamoId", "value": ""},
-            {"name": "TopeRegistros", "value": "1500"}
+            {"name": "Cookie", "value": "={{$json.cookie}}"}
           ]
         },
         "options": {
-          "response": {"response": {"fullResponse": false, "responseFormat": "json"}}
+          "response": {"response": {"fullResponse": true, "responseFormat": "text"}}
         },
-        "sendBody": true,
-        "bodyContentType": "form-urlencoded"
+        "putOutputIn": "data"
       },
       "id": "5",
-      "name": "GET Pólizas Data",
+      "name": "GET Pólizas Page",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [1050, 300]
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first();\nconst data = response.Data || [];\nif (!Array.isArray(data)) {\n  return { success: false, error: 'No data received', polizas: [] };\n}\nconst motivos_excluir = ['Cambio forma de pago'];\nconst productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\nconst polizas = [];\nfor (const item of data) {\n  const motivo = item.TipoEndosoDescripcion || '';\n  const productor = item.ProductorPrincipalDescripcion || '';\n  const poliza = item.Poliza || '';\n  const idCotizacion = item.CotizacionId;\n  let excluir = false;\n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) excluir = true;\n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) excluir = true;\n  if (!excluir && poliza && idCotizacion) {\n    polizas.push({\n      ramo: item.RamoDescripcion || '',\n      poliza: poliza,\n      endoso: item.NumeroEndoso || '',\n      productor: productor,\n      motivo: motivo,\n      idCotizacion: idCotizacion\n    });\n  }\n}\nreturn { success: true, polizas };"
+        "jsCode": "const response = $input.first();\nconst html = response.json.data || response.data || response.body || '';\n\nif (!html || typeof html !== 'string') {\n  return { success: false, error: 'No HTML data received', polizas: [] };\n}\n\nlet data = [];\nconst patterns = [\n  /var\\s+dataSource\\s*=\\s*(\\[.*?\\]);/s,\n  /datasource['\"]?\\s*:\\s*(\\[.*?\\])/is,\n  /\\{\\s*\"Data\"\\s*:\\s*(\\[.*?\\])\\s*\\}/s\n];\n\nfor (const pattern of patterns) {\n  const match = html.match(pattern);\n  if (match && match[1]) {\n    try {\n      data = JSON.parse(match[1]);\n      if (Array.isArray(data)) break;\n    } catch (e) {\n      continue;\n    }\n  }\n}\n\nif (!Array.isArray(data)) {\n  return { success: false, error: 'No data array found in HTML', polizas: [] };\n}\n\nconst motivos_excluir = ['Cambio forma de pago'];\nconst productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\nconst polizas = [];\n\nfor (const item of data) {\n  const motivo = item.TipoEndosoDescripcion || '';\n  const productor = item.ProductorPrincipalDescripcion || '';\n  const poliza = item.Poliza || '';\n  const idCotizacion = item.CotizacionId;\n  let excluir = false;\n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) excluir = true;\n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) excluir = true;\n  if (!excluir && poliza && idCotizacion) {\n    polizas.push({\n      ramo: item.RamoDescripcion || '',\n      poliza: poliza,\n      endoso: item.NumeroEndoso || '',\n      productor: productor,\n      motivo: motivo,\n      idCotizacion: idCotizacion\n    });\n  }\n}\n\nreturn { success: true, polizas };"
       },
       "id": "6",
       "name": "Procesar y Filtrar Datos",
