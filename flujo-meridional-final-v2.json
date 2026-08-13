@@ -89,18 +89,57 @@
     },
     {
       "parameters": {
-        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read?FechaVigenciaDesde={{$('Calcular Fechas1').first().json.vigencia_desde}}&FechaVigenciaHasta={{$('Calcular Fechas1').first().json.vigencia_hasta}}&RamoId={{$('Calcular Fechas1').first().json.grupoRamoId}}",
+        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read",
         "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión1').first().json.cookie}}"},
-            {"name": "X-Requested-With", "value": "XMLHttpRequest"}
+            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión1').first().json.cookie}}"}
+          ]
+        },
+        "bodyParametersUi": "keyvalue",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "FechaVigenciaDesde", "value": "={{$('Calcular Fechas1').first().json.vigencia_desde}}"},
+            {"name": "FechaVigenciaHasta", "value": "={{$('Calcular Fechas1').first().json.vigencia_hasta}}"},
+            {"name": "RamoId", "value": "211"},
+            {"name": "Tipo", "value": "Endosos"},
+            {"name": "VisualizaPolizasRenovadas", "value": "false"},
+            {"name": "VisualizaPolizasAnuladas", "value": "false"},
+            {"name": "PoseeRenovacionEmitidaYAnulada", "value": "false"},
+            {"name": "TopeRegistros", "value": "1500"},
+            {"name": "chk_PersonaTomadorDescripcion", "value": "on"},
+            {"name": "chk_FechaInicioContrato", "value": "on"},
+            {"name": "chk_FechaFinContrato", "value": "on"},
+            {"name": "chk_CotizacionId", "value": "on"},
+            {"name": "chk_NumeroEndoso", "value": "on"},
+            {"name": "chk_EstadoCotizacionDescripcion", "value": "on"},
+            {"name": "chk_FechaHoraEmision", "value": "on"},
+            {"name": "chk_FormaPagoDescripcion", "value": "on"},
+            {"name": "chk_CantidadItems", "value": "on"},
+            {"name": "chk_MonedaDescripcion", "value": "on"},
+            {"name": "chk_TipoEndosoDescripcion", "value": "on"},
+            {"name": "chk_PersonaTomadorDocumento", "value": "on"},
+            {"name": "chk_NumeroPropuesta", "value": "on"},
+            {"name": "chk_NumeroPropuestaExterno", "value": "on"},
+            {"name": "chk_Premio", "value": "on"},
+            {"name": "chk_PrimaPuraProrrateada", "value": "on"},
+            {"name": "chk_ProductorPrincipalDescripcion", "value": "on"},
+            {"name": "chk_Poliza", "value": "on"},
+            {"name": "chk_DiasHastaVencimientoVigenciaInt_FechaFinVigencia_FechaInicioVigencia", "value": "on"},
+            {"name": "chk_RamoDescripcion", "value": "on"},
+            {"name": "chk_RenovadaPor", "value": "on"},
+            {"name": "chk_RenuevaA", "value": "on"},
+            {"name": "chk_MarcaGestionAsignacion", "value": "on"},
+            {"name": "chk_SumaAseguradaTotal", "value": "on"},
+            {"name": "__RequestVerificationToken", "value": "={{$('Extraer Token CSRF').first().json.csrfToken}}"}
           ]
         },
         "options": {
           "response": {"response": {"fullResponse": true, "responseFormat": "json"}}
-        }
+        },
+        "sendBody": true,
+        "bodyContentType": "form-urlencoded"
       },
       "id": "5",
       "name": "GET Pólizas Page",
