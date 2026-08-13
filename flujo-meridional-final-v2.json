@@ -11,6 +11,16 @@
     },
     {
       "parameters": {
+        "jsCode": "const today = new Date();\nconst vigenciaDesde = new Date(today);\nvigenciaDesde.setDate(vigenciaDesde.getDate() - 120);\n\nconst formatDate = (date) => {\n  const d = String(date.getDate()).padStart(2, '0');\n  const m = String(date.getMonth() + 1).padStart(2, '0');\n  const y = date.getFullYear();\n  return `${d}/${m}/${y}`;\n};\n\nreturn {\n  vigencia_desde: formatDate(vigenciaDesde),\n  vigencia_hasta: formatDate(today),\n  grupoRamoId: 4,\n  grupoRamo: 'Hogar'\n};"
+      },
+      "id": "0",
+      "name": "Calcular Fechas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 150]
+    },
+    {
+      "parameters": {
         "url": "https://ws8.meridionalnet.com.ar/Account/Login",
         "method": "GET",
         "options": {
@@ -79,7 +89,7 @@
     },
     {
       "parameters": {
-        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos",
+        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos?vigencia_desde={{$('Calcular Fechas').first().json.vigencia_desde}}&vigencia_hasta={{$('Calcular Fechas').first().json.vigencia_hasta}}&grupoRamoId={{$('Calcular Fechas').first().json.grupoRamoId}}&grupoRamo={{$('Calcular Fechas').first().json.grupoRamo}}",
         "method": "GET",
         "sendHeaders": true,
         "headerParameters": {
@@ -100,7 +110,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first();\nconst html = response.json.data || response.data || response.body || '';\n\nif (!html || typeof html !== 'string') {\n  return { success: false, error: 'No HTML data received', polizas: [] };\n}\n\nlet data = [];\nconst patterns = [\n  /var\\s+dataSource\\s*=\\s*(\\[.*?\\]);/s,\n  /datasource['\"]?\\s*:\\s*(\\[.*?\\])/is,\n  /\\{\\s*\"Data\"\\s*:\\s*(\\[.*?\\])\\s*\\}/s\n];\n\nfor (const pattern of patterns) {\n  const match = html.match(pattern);\n  if (match && match[1]) {\n    try {\n      data = JSON.parse(match[1]);\n      if (Array.isArray(data)) break;\n    } catch (e) {\n      continue;\n    }\n  }\n}\n\nif (!Array.isArray(data)) {\n  return { success: false, error: 'No data array found in HTML', polizas: [] };\n}\n\nconst motivos_excluir = ['Cambio forma de pago'];\nconst productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\nconst polizas = [];\n\nfor (const item of data) {\n  const motivo = item.TipoEndosoDescripcion || '';\n  const productor = item.ProductorPrincipalDescripcion || '';\n  const poliza = item.Poliza || '';\n  const idCotizacion = item.CotizacionId;\n  let excluir = false;\n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) excluir = true;\n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) excluir = true;\n  if (!excluir && poliza && idCotizacion) {\n    polizas.push({\n      ramo: item.RamoDescripcion || '',\n      poliza: poliza,\n      endoso: item.NumeroEndoso || '',\n      productor: productor,\n      motivo: motivo,\n      idCotizacion: idCotizacion\n    });\n  }\n}\n\nreturn { success: true, polizas };"
+        "jsCode": "const response = $input.first();\nconst html = response.json.data || response.data || response.body || '';\n\nif (!html || typeof html !== 'string') {\n  return { success: false, error: 'No HTML data received', polizas: [] };\n}\n\nlet data = [];\nconst patterns = [\n  /var\\s+dataSource\\s*=\\s*(\\[.*?\\]);/s,\n  /datasource['\"]?\\s*:\\s*(\\[.*?\\])/is,\n  /\\{\\s*\"Data\"\\s*:\\s*(\\[.*?\\])\\s*\\}/s\n];\n\nfor (const pattern of patterns) {\n  const match = html.match(pattern);\n  if (match && match[1]) {\n    try {\n      data = JSON.parse(match[1]);\n      if (Array.isArray(data)) break;\n    } catch (e) {\n      continue;\n    }\n  }\n}\n\nif (!Array.isArray(data)) {\n  return { success: false, error: 'No data array found in HTML', polizas: [] };\n}\n\nconst motivos_excluir = ['Cambio forma de pago'];\nconst productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'GORGAL', 'MAGNAGHI'];\nconst polizas = [];\n\nfor (const item of data) {\n  const motivo = item.TipoEndosoDescripcion || '';\n  const productor = item.ProductorPrincipalDescripcion || '';\n  const poliza = item.Poliza || '';\n  const idCotizacion = item.CotizacionId;\n  let excluir = false;\n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) excluir = true;\n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) excluir = true;\n  if (!excluir && poliza && idCotizacion) {\n    polizas.push({\n      ramo: item.RamoDescripcion || '',\n      poliza: poliza,\n      endoso: item.NumeroEndoso || '',\n      productor: productor,\n      motivo: motivo,\n      idCotizacion: idCotizacion\n    });\n  }\n}\n\nreturn { success: true, polizas };"
       },
       "id": "6",
       "name": "Procesar y Filtrar Datos",
@@ -178,6 +188,9 @@
   ],
   "connections": {
     "Trigger Manual": {
+      "main": [[{"node": "Calcular Fechas", "branch": 0, "type": "main"}]]
+    },
+    "Calcular Fechas": {
       "main": [[{"node": "GET Login Page", "branch": 0, "type": "main"}]]
     },
     "GET Login Page": {
