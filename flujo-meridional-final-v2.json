@@ -89,18 +89,31 @@
     },
     {
       "parameters": {
-        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos?vigencia_desde={{$('Calcular Fechas').first().json.vigencia_desde}}&vigencia_hasta={{$('Calcular Fechas').first().json.vigencia_hasta}}&grupoRamoId={{$('Calcular Fechas').first().json.grupoRamoId}}&grupoRamo={{$('Calcular Fechas').first().json.grupoRamo}}",
-        "method": "GET",
+        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read",
+        "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Cookie", "value": "={{$json.cookie}}"}
+            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión').first().json.cookie}}"}
+          ]
+        },
+        "bodyParametersUi": "keyvalue",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "FechaVigenciaDesde", "value": "={{$('Calcular Fechas').first().json.vigencia_desde}}"},
+            {"name": "FechaVigenciaHasta", "value": "={{$('Calcular Fechas').first().json.vigencia_hasta}}"},
+            {"name": "RamoId", "value": "={{$('Calcular Fechas').first().json.grupoRamoId}}"},
+            {"name": "TopeRegistros", "value": "5000"},
+            {"name": "VisualizaPolizasRenovadas", "value": "true"},
+            {"name": "VisualizaPolizasAnuladas", "value": "false"},
+            {"name": "PoseeRenovacionEmitidaYAnulada", "value": "false"}
           ]
         },
         "options": {
-          "response": {"response": {"fullResponse": true, "responseFormat": "text"}}
+          "response": {"response": {"fullResponse": true, "responseFormat": "json"}}
         },
-        "putOutputIn": "data"
+        "sendBody": true,
+        "bodyContentType": "form-urlencoded"
       },
       "id": "5",
       "name": "GET Pólizas Page",
