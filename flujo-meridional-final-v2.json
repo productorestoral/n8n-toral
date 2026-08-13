@@ -69,8 +69,24 @@
     },
     {
       "parameters": {
+        "jsCode": "const postLoginResponse = $input.first();\nconst headers = postLoginResponse.json.headers || {};\nconst prevCookie = $('Extraer Token CSRF').first().json.cookie || '';\n\nlet setCookie = headers['set-cookie'] || headers['Set-Cookie'] || [];\nif (!Array.isArray(setCookie)) setCookie = [setCookie];\nconst newCookies = setCookie.map((c) => c.split(';')[0]);\n\nconst merged = {};\nprevCookie.split('; ').filter(Boolean).forEach((c) => {\n  const [k, v] = c.split('=');\n  merged[k] = v;\n});\nnewCookies.forEach((c) => {\n  const [k, v] = c.split('=');\n  merged[k] = v;\n});\n\nconst cookieStr = Object.entries(merged).map(([k, v]) => `${k}=${v}`).join('; ');\n\nreturn { cookie: cookieStr };"
+      },
+      "id": "4.5",
+      "name": "Extraer Cookie de Sesión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, 300]
+    },
+    {
+      "parameters": {
         "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos",
         "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Cookie", "value": "={{$json.cookie}}"}
+          ]
+        },
         "options": {
           "response": {"response": {"fullResponse": true, "responseFormat": "text"}}
         },
@@ -165,6 +181,9 @@
       "main": [[{"node": "POST Login", "branch": 0, "type": "main"}]]
     },
     "POST Login": {
+      "main": [[{"node": "Extraer Cookie de Sesión", "branch": 0, "type": "main"}]]
+    },
+    "Extraer Cookie de Sesión": {
       "main": [[{"node": "GET Pólizas Page", "branch": 0, "type": "main"}]]
     },
     "GET Pólizas Page": {
