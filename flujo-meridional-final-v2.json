@@ -89,12 +89,12 @@
     },
     {
       "parameters": {
-        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read?FechaVigenciaDesde={{$('Calcular Fechas').first().json.vigencia_desde}}&FechaVigenciaHasta={{$('Calcular Fechas').first().json.vigencia_hasta}}&RamoId={{$('Calcular Fechas').first().json.grupoRamoId}}",
+        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read?FechaVigenciaDesde={{$('Calcular Fechas1').first().json.vigencia_desde}}&FechaVigenciaHasta={{$('Calcular Fechas1').first().json.vigencia_hasta}}&RamoId={{$('Calcular Fechas1').first().json.grupoRamoId}}",
         "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión').first().json.cookie}}"},
+            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión1').first().json.cookie}}"},
             {"name": "X-Requested-With", "value": "XMLHttpRequest"}
           ]
         },
