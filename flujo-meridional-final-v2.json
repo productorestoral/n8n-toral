@@ -89,7 +89,7 @@
     },
     {
       "parameters": {
-        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read?FechaVigenciaDesde={{$('Calcular Fechas').first().json.vigencia_desde}}&FechaVigenciaHasta={{$('Calcular Fechas').first().json.vigencia_hasta}}&RamoId={{$('Calcular Fechas').first().json.grupoRamoId}}&skip=0&take=50",
+        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read?FechaVigenciaDesde={{$('Calcular Fechas').first().json.vigencia_desde}}&FechaVigenciaHasta={{$('Calcular Fechas').first().json.vigencia_hasta}}&RamoId={{$('Calcular Fechas').first().json.grupoRamoId}}",
         "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
