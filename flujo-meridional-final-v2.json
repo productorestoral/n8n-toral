@@ -94,14 +94,14 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión1').first().json.cookie}}"}
+            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión').first().json.cookie}}"}
           ]
         },
         "bodyParametersUi": "keyvalue",
         "bodyParameters": {
           "parameters": [
-            {"name": "FechaVigenciaDesde", "value": "={{$('Calcular Fechas1').first().json.vigencia_desde}}"},
-            {"name": "FechaVigenciaHasta", "value": "={{$('Calcular Fechas1').first().json.vigencia_hasta}}"},
+            {"name": "FechaVigenciaDesde", "value": "={{$('Calcular Fechas').first().json.vigencia_desde}}"},
+            {"name": "FechaVigenciaHasta", "value": "={{$('Calcular Fechas').first().json.vigencia_hasta}}"},
             {"name": "RamoId", "value": "211"},
             {"name": "Tipo", "value": "Endosos"},
             {"name": "VisualizaPolizasRenovadas", "value": "false"},
@@ -132,7 +132,7 @@
             {"name": "chk_RenuevaA", "value": "on"},
             {"name": "chk_MarcaGestionAsignacion", "value": "on"},
             {"name": "chk_SumaAseguradaTotal", "value": "on"},
-            {"name": "__RequestVerificationToken", "value": "={{$('Extraer Token CSRF1').first().json.csrfToken}}"}
+            {"name": "__RequestVerificationToken", "value": "={{$('Extraer Token CSRF').first().json.csrfToken}}"}
           ]
         },
         "options": {
