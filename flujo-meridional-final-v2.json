@@ -79,28 +79,38 @@
     },
     {
       "parameters": {
-        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos",
-        "method": "GET",
+        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read",
+        "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Cookie", "value": "={{$json.cookie}}"}
+            {"name": "Cookie", "value": "={{$json.cookie}}"},
+            {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+          ]
+        },
+        "bodyParametersUi": "keyvalue",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "Tipo", "value": "Endosos"},
+            {"name": "RamoId", "value": ""},
+            {"name": "TopeRegistros", "value": "1500"}
           ]
         },
         "options": {
-          "response": {"response": {"fullResponse": true, "responseFormat": "text"}}
+          "response": {"response": {"fullResponse": false, "responseFormat": "json"}}
         },
-        "putOutputIn": "data"
+        "sendBody": true,
+        "bodyContentType": "form-urlencoded"
       },
       "id": "5",
-      "name": "GET Pólizas Page",
+      "name": "GET Pólizas Data",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [1050, 300]
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first();\nlet html = response.json.data || response.data || response.body || '';\nif (!html || typeof html !== 'string') {\n  return { success: false, error: 'No HTML', polizas: [] };\n}\nconst tableMatch = html.match(/<table[^>]*>([\\s\\S]*?)<\\/table>/);\nif (!tableMatch) {\n  return { success: false, error: 'Table not found', polizas: [] };\n}\nconst polizas = [];\nconst rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet rowMatch;\nwhile ((rowMatch = rowRegex.exec(tableMatch[1])) !== null) {\n  const row = rowMatch[1];\n  const cellRegex = /<td[^>]*>([\\s\\S]*?)<\\/td>/g;\n  const cells = [];\n  let cellMatch;\n  while ((cellMatch = cellRegex.exec(row)) !== null) {\n    let content = cellMatch[1].replace(/<[^>]*>/g, '').trim();\n    cells.push(content);\n  }\n  if (cells.length < 28) continue;\n  const ramo = cells[5] || '';\n  const poliza = cells[6] || '';\n  const endoso = cells[7] || '';\n  const motivo = cells[9] || '';\n  const productor = cells[13] || '';\n  const idCotizacion = cells[27] || '';\n  const motivos_excluir = ['Cambio forma de pago'];\n  const productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\n  let excluir = false;\n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) excluir = true;\n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) excluir = true;\n  if (!excluir && poliza && idCotizacion) {\n    polizas.push({ramo, poliza, endoso, productor, motivo, idCotizacion});\n  }\n}\nreturn { success: true, polizas };"
+        "jsCode": "const response = $input.first();\nconst data = response.Data || [];\nif (!Array.isArray(data)) {\n  return { success: false, error: 'No data received', polizas: [] };\n}\nconst motivos_excluir = ['Cambio forma de pago'];\nconst productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\nconst polizas = [];\nfor (const item of data) {\n  const motivo = item.TipoEndosoDescripcion || '';\n  const productor = item.ProductorPrincipalDescripcion || '';\n  const poliza = item.Poliza || '';\n  const idCotizacion = item.CotizacionId;\n  let excluir = false;\n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) excluir = true;\n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) excluir = true;\n  if (!excluir && poliza && idCotizacion) {\n    polizas.push({\n      ramo: item.RamoDescripcion || '',\n      poliza: poliza,\n      endoso: item.NumeroEndoso || '',\n      productor: productor,\n      motivo: motivo,\n      idCotizacion: idCotizacion\n    });\n  }\n}\nreturn { success: true, polizas };"
       },
       "id": "6",
       "name": "Procesar y Filtrar Datos",
