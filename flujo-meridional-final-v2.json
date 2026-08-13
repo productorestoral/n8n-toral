@@ -122,6 +122,12 @@
       "parameters": {
         "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/DatosPoliza?idCotizacion={{$json.idCotizacion}}&grupoRamoId=4&grupoRamo=Inmuebles",
         "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión').first().json.cookie}}"}
+          ]
+        },
         "options": {
           "response": {"response": {"fullResponse": true, "responseFormat": "text"}}
         },
@@ -135,7 +141,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first();\nlet html = response.json.data || response.data || response.body || '';\nif (!html) return { calle: '', altura: '', provincia: '', sumaAsegurada: '' };\nconst riesgosMatch = html.match(/<table[^>]*>([\\s\\S]*?)<\\/table>/);\nif (!riesgosMatch) return { calle: '', altura: '', provincia: '', sumaAsegurada: '' };\nconst tableHtml = riesgosMatch[1];\nconst rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet rowMatch;\nlet calle = '', altura = '', provincia = '', sumaAsegurada = '';\nwhile ((rowMatch = rowRegex.exec(tableHtml)) !== null) {\n  const row = rowMatch[1];\n  const cellRegex = /<td[^>]*>([\\s\\S]*?)<\\/td>/g;\n  const cells = [];\n  let cellMatch;\n  while ((cellMatch = cellRegex.exec(row)) !== null) {\n    let content = cellMatch[1].replace(/<[^>]*>/g, '').trim();\n    cells.push(content);\n  }\n  if (cells.length > 0 && cells[0].includes('INCENDIO EDIFICIO')) {\n    sumaAsegurada = cells[2] || '';\n  }\n  if (cells.length >= 7) {\n    calle = cells[6] || calle;\n    altura = cells[7] || altura;\n    provincia = cells[4] || provincia;\n  }\n}\nreturn { calle, altura, provincia, sumaAsegurada };"
+        "jsCode": "const response = $input.first();\nconst itemData = $('Item Lists').first().json;\nlet html = response.json.data || response.data || response.body || '';\nif (!html) return { ...itemData, calle: '', altura: '', provincia: '', sumaAsegurada: '' };\nconst riesgosMatch = html.match(/<table[^>]*>([\\s\\S]*?)<\\/table>/);\nif (!riesgosMatch) return { ...itemData, calle: '', altura: '', provincia: '', sumaAsegurada: '' };\nconst tableHtml = riesgosMatch[1];\nconst rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet rowMatch;\nlet calle = '', altura = '', provincia = '', sumaAsegurada = '';\nwhile ((rowMatch = rowRegex.exec(tableHtml)) !== null) {\n  const row = rowMatch[1];\n  const cellRegex = /<td[^>]*>([\\s\\S]*?)<\\/td>/g;\n  const cells = [];\n  let cellMatch;\n  while ((cellMatch = cellRegex.exec(row)) !== null) {\n    let content = cellMatch[1].replace(/<[^>]*>/g, '').trim();\n    cells.push(content);\n  }\n  if (cells.length > 0 && cells[0].includes('INCENDIO EDIFICIO')) {\n    sumaAsegurada = cells[2] || '';\n  }\n  if (cells.length >= 7) {\n    calle = cells[6] || calle;\n    altura = cells[7] || altura;\n    provincia = cells[4] || provincia;\n  }\n}\nreturn { ...itemData, calle, altura, provincia, sumaAsegurada };"
       },
       "id": "9",
       "name": "Extraer Riesgos",
@@ -145,7 +151,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.all()[0];\nconst risks = $input.all()[1] || {};\nreturn {\n  Productor: data.productor,\n  Poliza: data.poliza,\n  Endoso: data.endoso,\n  Calle: risks.calle || '',\n  Altura: risks.altura || '',\n  Provincia: risks.provincia || '',\n  Suma_Asegurada: risks.sumaAsegurada || ''\n};"
+        "jsCode": "const data = $input.first();\nreturn {\n  Productor: data.productor || '',\n  Poliza: data.poliza || '',\n  Endoso: data.endoso || '',\n  Calle: data.calle || '',\n  Altura: data.altura || '',\n  Provincia: data.provincia || '',\n  Suma_Asegurada: data.sumaAsegurada || ''\n};"
       },
       "id": "10",
       "name": "Combinar Datos",
