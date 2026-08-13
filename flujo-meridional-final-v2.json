@@ -26,7 +26,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first();\nconst html = response.json.data || response.data || response.body || '';\nif (!html || typeof html !== 'string') {\n  return { error: 'No HTML data received' };\n}\nconst patterns = [\n  /name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"/i,\n  /value=\"([^\"]+)\"[^>]*name=\"__RequestVerificationToken\"/i,\n  /__RequestVerificationToken.*?value=\"([^\"]+)\"/\n];\nlet tokenMatch;\nfor (let pattern of patterns) {\n  tokenMatch = html.match(pattern);\n  if (tokenMatch) break;\n}\nif (!tokenMatch || !tokenMatch[1]) {\n  return { error: 'Token CSRF no encontrado' };\n}\nreturn { csrfToken: tokenMatch[1] };"
+        "jsCode": "const response = $input.first();\nconst html = response.json.data || response.data || response.body || '';\nconst headers = response.json.headers || response.headers || {};\n\nif (!html || typeof html !== 'string') {\n  return { error: 'No HTML data received' };\n}\n\nlet setCookie = headers['set-cookie'] || headers['Set-Cookie'] || [];\nif (!Array.isArray(setCookie)) setCookie = [setCookie];\nconst cookieStr = setCookie.map((c) => c.split(';')[0]).join('; ');\n\nconst patterns = [\n  /name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"/i,\n  /value=\"([^\"]+)\"[^>]*name=\"__RequestVerificationToken\"/i,\n  /__RequestVerificationToken.*?value=\"([^\"]+)\"/\n];\nlet tokenMatch;\nfor (let pattern of patterns) {\n  tokenMatch = html.match(pattern);\n  if (tokenMatch) break;\n}\nif (!tokenMatch || !tokenMatch[1]) {\n  return { error: 'Token CSRF no encontrado' };\n}\nreturn { csrfToken: tokenMatch[1], cookie: cookieStr };"
       },
       "id": "3",
       "name": "Extraer Token CSRF",
@@ -36,10 +36,14 @@
     },
     {
       "parameters": {
-        "url": "https://ws8.meridionalnet.com.ar/Account/Login",
+        "url": "https://ws8.meridionalnet.com.ar/Account/Login?returnurl=%2FGestion%2FPolizaEmitida%2FEndosos",
         "method": "POST",
+        "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}]
+          "parameters": [
+            {"name": "Cookie", "value": "={{$json.cookie}}"},
+            {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+          ]
         },
         "bodyParametersUi": "keyvalue",
         "bodyParameters": {
