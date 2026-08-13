@@ -1,0 +1,184 @@
+{
+  "name": "Scraper Meridional - Pólizas Completo a Google Sheets",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Trigger Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://ws8.meridionalnet.com.ar/Account/Login",
+        "method": "GET",
+        "options": {
+          "response": {"response": {"fullResponse": true, "responseFormat": "text"}}
+        }
+      },
+      "id": "2",
+      "name": "GET Login Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first();\nconst html = response.body || response.data || JSON.stringify(response);\nif (!html || typeof html !== 'string') {\n  return { error: 'No HTML data received' };\n}\nlet tokenMatch = html.match(/name=[\"']__RequestVerificationToken[\"'][^>]*value=[\"']([^\"']+)[\"']/i);\nif (!tokenMatch) {\n  tokenMatch = html.match(/value=[\"']([^\"']+)[\"'][^>]*name=[\"']__RequestVerificationToken[\"']/i);\n}\nif (!tokenMatch) {\n  tokenMatch = html.match(/__RequestVerificationToken.*?value=\"([^\"]+)\"/);\n}\nif (!tokenMatch || !tokenMatch[1]) {\n  return { error: 'Token CSRF no encontrado' };\n}\nreturn { csrfToken: tokenMatch[1] };"
+      },
+      "id": "3",
+      "name": "Extraer Token CSRF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://ws8.meridionalnet.com.ar/Account/Login",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}]
+        },
+        "bodyParametersUi": "keyvalue",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "Usuario", "value": "ESTORAL"},
+            {"name": "password", "value": "Etoral59s"},
+            {"name": "correo"},
+            {"name": "__RequestVerificationToken", "value": "={{$json.csrfToken}}"}
+          ]
+        },
+        "options": {
+          "redirect": {"redirect": {"followRedirects": false}},
+          "response": {"response": {"fullResponse": true, "neverError": true, "responseFormat": "text"}}
+        },
+        "sendBody": true,
+        "bodyContentType": "form-urlencoded"
+      },
+      "id": "4",
+      "name": "POST Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/Endosos",
+        "method": "GET",
+        "options": {
+          "response": {"response": {"fullResponse": true, "responseFormat": "text"}}
+        }
+      },
+      "id": "5",
+      "name": "GET Pólizas Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first();\nlet html = response.body || response.data || '';\nif (!html || typeof html !== 'string') {\n  return { success: false, error: 'No HTML', polizas: [] };\n}\nconst tableMatch = html.match(/<table[^>]*>([\\s\\S]*?)<\\/table>/);\nif (!tableMatch) {\n  return { success: false, error: 'Table not found', polizas: [] };\n}\nconst polizas = [];\nconst rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet rowMatch;\nwhile ((rowMatch = rowRegex.exec(tableMatch[1])) !== null) {\n  const row = rowMatch[1];\n  const cellRegex = /<td[^>]*>([\\s\\S]*?)<\\/td>/g;\n  const cells = [];\n  let cellMatch;\n  while ((cellMatch = cellRegex.exec(row)) !== null) {\n    let content = cellMatch[1].replace(/<[^>]*>/g, '').trim();\n    cells.push(content);\n  }\n  if (cells.length < 28) continue;\n  const ramo = cells[5] || '';\n  const poliza = cells[6] || '';\n  const endoso = cells[7] || '';\n  const motivo = cells[9] || '';\n  const productor = cells[13] || '';\n  const idCotizacion = cells[27] || '';\n  const motivos_excluir = ['Cambio forma de pago'];\n  const productores_excluir = ['FASANELLA', 'LIJO', 'CALARCO', 'MAGNAGHI'];\n  let excluir = false;\n  if (motivos_excluir.some(m => motivo.toUpperCase().includes(m.toUpperCase()))) excluir = true;\n  if (productores_excluir.some(p => productor.toUpperCase().includes(p.toUpperCase()))) excluir = true;\n  if (!excluir && poliza && idCotizacion) {\n    polizas.push({ramo, poliza, endoso, productor, motivo, idCotizacion});\n  }\n}\nreturn { success: true, polizas };"
+      },
+      "id": "6",
+      "name": "Procesar y Filtrar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "splitIntoItems": "={{$json.polizas}}"
+      },
+      "id": "7",
+      "name": "Item Lists",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "position": [1350, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/DatosPoliza?idCotizacion={{$json.idCotizacion}}&grupoRamoId=4&grupoRamo=Inmuebles",
+        "method": "GET",
+        "options": {
+          "response": {"response": {"fullResponse": true, "responseFormat": "text"}}
+        }
+      },
+      "id": "8",
+      "name": "GET DatosPoliza",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first();\nlet html = response.body || response.data || '';\nif (!html) return { calle: '', altura: '', provincia: '', sumaAsegurada: '' };\nconst riesgosMatch = html.match(/<table[^>]*>([\\s\\S]*?)<\\/table>/);\nif (!riesgosMatch) return { calle: '', altura: '', provincia: '', sumaAsegurada: '' };\nconst tableHtml = riesgosMatch[1];\nconst rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet rowMatch;\nlet calle = '', altura = '', provincia = '', sumaAsegurada = '';\nwhile ((rowMatch = rowRegex.exec(tableHtml)) !== null) {\n  const row = rowMatch[1];\n  const cellRegex = /<td[^>]*>([\\s\\S]*?)<\\/td>/g;\n  const cells = [];\n  let cellMatch;\n  while ((cellMatch = cellRegex.exec(row)) !== null) {\n    let content = cellMatch[1].replace(/<[^>]*>/g, '').trim();\n    cells.push(content);\n  }\n  if (cells.length > 0 && cells[0].includes('INCENDIO EDIFICIO')) {\n    sumaAsegurada = cells[2] || '';\n  }\n  if (cells.length >= 7) {\n    calle = cells[6] || calle;\n    altura = cells[7] || altura;\n    provincia = cells[4] || provincia;\n  }\n}\nreturn { calle, altura, provincia, sumaAsegurada };"
+      },
+      "id": "9",
+      "name": "Extraer Riesgos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.all()[0];\nconst risks = $input.all()[1] || {};\nreturn {\n  Productor: data.productor,\n  Poliza: data.poliza,\n  Endoso: data.endoso,\n  Calle: risks.calle || '',\n  Altura: risks.altura || '',\n  Provincia: risks.provincia || '',\n  Suma_Asegurada: risks.sumaAsegurada || ''\n};"
+      },
+      "id": "10",
+      "name": "Combinar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1750, 300]
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "sheetId": "0",
+        "columns": "Productor,Poliza,Endoso,Calle,Altura,Provincia,Suma_Asegurada"
+      },
+      "id": "11",
+      "name": "Append Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1900, 300],
+      "credentials": {
+        "googleSheetsApi": "google_sheets_api"
+      }
+    }
+  ],
+  "connections": {
+    "Trigger Manual": {
+      "main": [[{"node": "GET Login Page", "branch": 0, "type": "main"}]]
+    },
+    "GET Login Page": {
+      "main": [[{"node": "Extraer Token CSRF", "branch": 0, "type": "main"}]]
+    },
+    "Extraer Token CSRF": {
+      "main": [[{"node": "POST Login", "branch": 0, "type": "main"}]]
+    },
+    "POST Login": {
+      "main": [[{"node": "GET Pólizas Page", "branch": 0, "type": "main"}]]
+    },
+    "GET Pólizas Page": {
+      "main": [[{"node": "Procesar y Filtrar Datos", "branch": 0, "type": "main"}]]
+    },
+    "Procesar y Filtrar Datos": {
+      "main": [[{"node": "Item Lists", "branch": 0, "type": "main"}]]
+    },
+    "Item Lists": {
+      "main": [[{"node": "GET DatosPoliza", "branch": 0, "type": "main"}]]
+    },
+    "GET DatosPoliza": {
+      "main": [[{"node": "Extraer Riesgos", "branch": 0, "type": "main"}]]
+    },
+    "Extraer Riesgos": {
+      "main": [[{"node": "Combinar Datos", "branch": 0, "type": "main"}]]
+    },
+    "Combinar Datos": {
+      "main": [[{"node": "Append Google Sheets", "branch": 0, "type": "main"}]]
+    }
+  },
+  "active": false,
+  "settings": {}
+}
