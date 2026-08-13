@@ -89,37 +89,18 @@
     },
     {
       "parameters": {
-        "url": "https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read",
+        "url": "=https://ws8.meridionalnet.com.ar/Gestion/PolizaEmitida/GrdPolizasEmitidas_Read?FechaVigenciaDesde={{$('Calcular Fechas').first().json.vigencia_desde}}&FechaVigenciaHasta={{$('Calcular Fechas').first().json.vigencia_hasta}}&RamoId={{$('Calcular Fechas').first().json.grupoRamoId}}&skip=0&take=50",
         "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión').first().json.cookie}}"}
-          ]
-        },
-        "bodyParametersUi": "keyvalue",
-        "bodyParameters": {
-          "parameters": [
-            {"name": "FechaVigenciaDesde", "value": "={{$('Calcular Fechas').first().json.vigencia_desde}}"},
-            {"name": "FechaVigenciaHasta", "value": "={{$('Calcular Fechas').first().json.vigencia_hasta}}"},
-            {"name": "RamoId", "value": "={{$('Calcular Fechas').first().json.grupoRamoId}}"},
-            {"name": "Poliza", "value": ""},
-            {"name": "Productor", "value": ""},
-            {"name": "ApellidoRazonSocial", "value": ""},
-            {"name": "Documento", "value": ""},
-            {"name": "Patente", "value": ""},
-            {"name": "NroPropiesta", "value": ""},
-            {"name": "NroPropuestaExterna", "value": ""},
-            {"name": "TopeRegistros", "value": "5000"},
-            {"name": "skip", "value": "0"},
-            {"name": "take", "value": "50"}
+            {"name": "Cookie", "value": "={{$('Extraer Cookie de Sesión').first().json.cookie}}"},
+            {"name": "X-Requested-With", "value": "XMLHttpRequest"}
           ]
         },
         "options": {
           "response": {"response": {"fullResponse": true, "responseFormat": "json"}}
-        },
-        "sendBody": true,
-        "bodyContentType": "form-urlencoded"
+        }
       },
       "id": "5",
       "name": "GET Pólizas Page",
