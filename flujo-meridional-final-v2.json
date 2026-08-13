@@ -132,6 +132,15 @@
             {"name": "chk_RenuevaA", "value": "on"},
             {"name": "chk_MarcaGestionAsignacion", "value": "on"},
             {"name": "chk_SumaAseguradaTotal", "value": "on"},
+            {"name": "sort", "value": ""},
+            {"name": "group", "value": ""},
+            {"name": "filter", "value": ""},
+            {"name": "VistaFiltroId", "value": ""},
+            {"name": "ProductorId", "value": ""},
+            {"name": "NumeroPoliza", "value": ""},
+            {"name": "NumeroEndoso", "value": ""},
+            {"name": "NumeroPropuesta", "value": ""},
+            {"name": "NumeroPropuestaExt", "value": ""},
             {"name": "__RequestVerificationToken", "value": "={{$('Extraer Token CSRF').first().json.csrfToken}}"}
           ]
         },
