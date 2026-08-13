@@ -132,7 +132,7 @@
             {"name": "chk_RenuevaA", "value": "on"},
             {"name": "chk_MarcaGestionAsignacion", "value": "on"},
             {"name": "chk_SumaAseguradaTotal", "value": "on"},
-            {"name": "__RequestVerificationToken", "value": "={{$('Extraer Token CSRF').first().json.csrfToken}}"}
+            {"name": "__RequestVerificationToken", "value": "={{$('Extraer Token CSRF1').first().json.csrfToken}}"}
           ]
         },
         "options": {
