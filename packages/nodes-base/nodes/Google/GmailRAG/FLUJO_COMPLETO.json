@@ -1,0 +1,127 @@
+{
+  "name": "Asesoramiento de Seguros - Gmail RAG Automático",
+  "description": "Flujo que procesa emails de clientes, busca en tus documentos de seguros y responde automáticamente",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "newEmail"
+      },
+      "id": "gmail_trigger_node",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [100, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Escucha nuevos emails en tu inbox"
+    },
+    {
+      "parameters": {
+        "resource": "gmailRag",
+        "operation": "searchAndRespond",
+        "emailId": "={{ $node['Gmail Trigger'].json.id }}",
+        "queryText": "={{ $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || $node['Gmail Trigger'].json.snippet }}",
+        "searchFolderName": "Documentos_Seguros",
+        "topK": 3,
+        "customPromptContext": "Eres un asesor profesional de seguros para Productores Toral. Tu rol es:\n1. Responder preguntas sobre seguros de forma clara y profesional\n2. Basarte ÚNICAMENTE en los documentos proporcionados\n3. Si la información no está en los documentos, ser honesto y decirlo\n4. Mantener un tono amable y profesional\n5. Ofrecer contacto directo si es necesario\n\nSiempre responde en español.",
+        "includeSources": true
+      },
+      "id": "gmail_rag_search",
+      "name": "Buscar en Documentos RAG",
+      "type": "n8n-nodes-base.gmailRag",
+      "typeVersion": 1,
+      "position": [400, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Busca respuesta en tus documentos usando embeddings y Gemini"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "reply",
+        "messageId": "={{ $node['Gmail Trigger'].json.id }}",
+        "body": "={{ 'Estimado cliente,\\n\\n' + $node['gmail_rag_search'].json.answer + '\\n\\n---\\nPara más información o consultas adicionales, contáctanos directamente.\\n\\nAtentamente,\\nProductores Toral\\nAsesores de Seguros' }}"
+      },
+      "id": "gmail_reply",
+      "name": "Enviar Respuesta",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Envía la respuesta automática al cliente"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "name": "={{ 'Consulta: ' + ($node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'From')?.value || 'Unknown') + ' - ' + ($node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || 'Sin asunto') }}",
+        "columns": "{{ ['Timestamp', 'Cliente', 'Asunto', 'Respuesta Generada', 'Confianza', 'Documentos Usados'] }}",
+        "data": "={{ [[new Date().toISOString(), $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'From')?.value, $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value, $node['gmail_rag_search'].json.answer, $node['gmail_rag_search'].json.confidence, $node['gmail_rag_search'].json.sourcedDocuments.map(d => d.fileName).join(', ')]] }}"
+      },
+      "id": "log_response",
+      "name": "Registrar Respuesta (Opcional)",
+      "type": "n8n-nodes-base.spreadsheet",
+      "typeVersion": 1,
+      "position": [1000, 300],
+      "notes": "Opcional: Registra las respuestas en una hoja de cálculo para auditoría"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Buscar en Documentos RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar en Documentos RAG": {
+      "main": [
+        [
+          {
+            "node": "Enviar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Respuesta": {
+      "main": [
+        [
+          {
+            "node": "Registrar Respuesta (Opcional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "Email Automation"
+    },
+    {
+      "name": "RAG"
+    },
+    {
+      "name": "Seguros"
+    }
+  ],
+  "meta": {
+    "templateCreatedDate": "2026-08-18"
+  }
+}
