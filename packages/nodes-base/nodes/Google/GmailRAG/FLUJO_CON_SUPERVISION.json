@@ -1,0 +1,186 @@
+{
+  "name": "Asesoramiento de Seguros - Gmail RAG con Supervisión",
+  "description": "Flujo que procesa emails, genera respuesta automática y pide aprobación del equipo antes de enviar",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "newEmail"
+      },
+      "id": "gmail_trigger_node",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [100, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Escucha nuevos emails en tu inbox"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "condition": "string",
+              "value1": "={{ $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || '' }}",
+              "operation": "notContains",
+              "value2": "promoción|oferta|descuento|spam|unsubscribe"
+            }
+          ]
+        }
+      },
+      "id": "filter_spam",
+      "name": "Filtrar Spam",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [300, 300],
+      "notes": "Descarta emails con palabras clave de marketing"
+    },
+    {
+      "parameters": {
+        "resource": "gmailRag",
+        "operation": "searchAndRespond",
+        "emailId": "={{ $node['Gmail Trigger'].json.id }}",
+        "queryText": "={{ $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || $node['Gmail Trigger'].json.snippet }}",
+        "searchFolderName": "Documentos_Seguros",
+        "topK": 3,
+        "customPromptContext": "Eres un asesor profesional de seguros para Productores Toral. Tu rol es:\n1. Responder preguntas sobre seguros de forma clara y profesional\n2. Basarte ÚNICAMENTE en los documentos proporcionados\n3. Si la información no está en los documentos, ser honesto y decirlo\n4. Mantener un tono amable y profesional\n5. Ofrecer contacto directo si es necesario\n\nSiempre responde en español.",
+        "includeSources": true
+      },
+      "id": "gmail_rag_search",
+      "name": "Generar Respuesta Automática",
+      "type": "n8n-nodes-base.gmailRag",
+      "typeVersion": 1,
+      "position": [500, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Busca respuesta en tus documentos usando embeddings y Gemini"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "createDraft",
+        "to": "={{ $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'From')?.value }}",
+        "subject": "={{ 'Re: ' + ($node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || 'Sin asunto') }}",
+        "body": "={{ 'Estimado cliente,\\n\\n' + $node['gmail_rag_search'].json.answer + '\\n\\n---\\nPara más información o consultas adicionales, contáctanos directamente.\\n\\nAtentamente,\\nProductores Toral\\nAsesores de Seguros' }}"
+      },
+      "id": "create_draft",
+      "name": "Crear Borrador (Sin Enviar)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Crea un borrador en Gmail para que el equipo revise antes de enviar"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "name": "{{ 'Respuesta pendiente: ' + ($node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'From')?.value || 'Unknown') }}",
+        "columns": "{{ ['Email Original', 'De', 'Asunto', 'Respuesta Propuesta', 'Confianza', 'Documentos Usados', 'Borrador ID', 'Estado'] }}",
+        "data": "={{ [[new Date().toISOString(), $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'From')?.value, $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value, $node['gmail_rag_search'].json.answer, $node['gmail_rag_search'].json.confidence, $node['gmail_rag_search'].json.sourcedDocuments.map(d => d.fileName).join(', '), $node['create_draft'].json.id, 'PENDIENTE REVISIÓN']] }}"
+      },
+      "id": "log_pending",
+      "name": "Registrar Respuesta Pendiente",
+      "type": "n8n-nodes-base.spreadsheet",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "notes": "Registra la respuesta propuesta esperando supervisión"
+    },
+    {
+      "parameters": {
+        "subject": "🔍 RESPUESTA AUTOMÁTICA PENDIENTE DE SUPERVISIÓN",
+        "html": "true",
+        "htmlMessage": "{{ '<h2>Respuesta Automática Generada - Esperando Supervisión</h2>' + '<p><strong>De:</strong> ' + $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'From')?.value + '</p>' + '<p><strong>Asunto Original:</strong> ' + $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value + '</p>' + '<hr>' + '<h3>RESPUESTA PROPUESTA:</h3>' + '<p>' + $node['gmail_rag_search'].json.answer.replace(/\\n/g, '<br>') + '</p>' + '<hr>' + '<p><strong>Confianza:</strong> ' + Math.round($node['gmail_rag_search'].json.confidence * 100) + '%</p>' + '<p><strong>Documentos Usados:</strong> ' + $node['gmail_rag_search'].json.sourcedDocuments.map(d => d.fileName).join(', ') + '</p>' + '<hr>' + '<p><a href=\"https://mail.google.com/mail/u/0/#drafts\"><button style=\"background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;\">VER BORRADOR EN GMAIL</button></a></p>' + '<p style=\"color: #666; font-size: 12px;\">⚠️ Por favor revisa la respuesta en el borrador de Gmail y envía si es correcta, o elimina si necesitas responder manualmente.</p>' }}"
+      },
+      "id": "notify_team",
+      "name": "Notificar Equipo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1100, 300],
+      "notes": "Notifica al equipo para que revise y apruebe antes de enviar"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Spam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Spam": {
+      "main": [
+        [
+          {
+            "node": "Generar Respuesta Automática",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Respuesta Automática": {
+      "main": [
+        [
+          {
+            "node": "Crear Borrador (Sin Enviar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Borrador (Sin Enviar)": {
+      "main": [
+        [
+          {
+            "node": "Registrar Respuesta Pendiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Respuesta Pendiente": {
+      "main": [
+        [
+          {
+            "node": "Notificar Equipo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "Email Automation"
+    },
+    {
+      "name": "RAG"
+    },
+    {
+      "name": "Seguros"
+    },
+    {
+      "name": "Con Supervisión"
+    }
+  ],
+  "meta": {
+    "templateCreatedDate": "2026-08-18"
+  }
+}
