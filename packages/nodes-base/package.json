@@ -565,6 +565,7 @@
       "dist/nodes/Google/Firebase/RealtimeDatabase/GoogleFirebaseRealtimeDatabase.node.js",
       "dist/nodes/Google/Gmail/Gmail.node.js",
       "dist/nodes/Google/Gmail/GmailTrigger.node.js",
+      "dist/nodes/Google/GmailRAG/GmailRAG.node.js",
       "dist/nodes/Google/GSuiteAdmin/GSuiteAdmin.node.js",
       "dist/nodes/Google/BusinessProfile/GoogleBusinessProfile.node.js",
       "dist/nodes/Google/BusinessProfile/GoogleBusinessProfileTrigger.node.js",

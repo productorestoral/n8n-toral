@@ -1,0 +1,17 @@
+{
+	"node": "n8n-nodes-base.gmailRag",
+	"nodeVersion": "1.0",
+	"codex": "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.gmailrag/",
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://docs.n8n.io/integrations/builtin/credentials/google/"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.gmailrag/"
+			}
+		]
+	}
+}
