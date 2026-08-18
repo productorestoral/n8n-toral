@@ -1,0 +1,120 @@
+{
+  "name": "Asesoramiento de Seguros - Flujo Básico",
+  "description": "Flujo ultra-simple: Recibe email con label, crea borrador automático. ¡Tú revisa y envía!",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "newEmail"
+      },
+      "id": "gmail_trigger",
+      "name": "1. Gmail Trigger - Escuchar Label",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [100, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Se ejecuta cuando email recibe label 'RAG-Process'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrae información del email\nconst payload = $input.all()[0].json.payload || {};\nconst headers = payload.headers || [];\n\nconst getHeader = (name) => {\n  const header = headers.find(h => h.name === name);\n  return header ? header.value : '';\n};\n\nconst from = getHeader('From');\nconst subject = getHeader('Subject');\nconst snippet = $input.all()[0].json.snippet || '';\n\nreturn [\n  {\n    json: {\n      from: from,\n      subject: subject,\n      snippet: snippet,\n      ready: true\n    }\n  }\n];"
+      },
+      "id": "extract_info",
+      "name": "2. Extraer Información del Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 300],
+      "notes": "Obtiene De, Asunto y contenido del email"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "createDraft",
+        "to": "={{ $node['2. Extraer Información del Email'].json.body.from }}",
+        "subject": "={{ 'Re: ' + $node['2. Extraer Información del Email'].json.body.subject }}",
+        "body": "=Estimado cliente,\n\nGracias por tu consulta sobre: {{ $node['2. Extraer Información del Email'].json.body.subject }}\n\n---\nTU RESPUESTA AQUI\n---\n\nNos alegra poder ayudarte. Para consultas adicionales, no dudes en contactarnos.\n\nAtentamente,\nProductores Toral\nAsesores de Seguros\nEmail: productores.toral@gmail.com"
+      },
+      "id": "create_draft",
+      "name": "3. Crear Borrador en Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Crea borrador con template básico para que revises"
+    },
+    {
+      "parameters": {
+        "operation": "addLabel",
+        "messageId": "={{ $node['1. Gmail Trigger - Escuchar Label'].json.id }}",
+        "labels": ["RAG-Processed"]
+      },
+      "id": "mark_processed",
+      "name": "4. Marcar como 'RAG-Processed'",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Etiqueta email para saber que ya fue procesado"
+    }
+  ],
+  "connections": {
+    "1. Gmail Trigger - Escuchar Label": {
+      "main": [
+        [
+          {
+            "node": "2. Extraer Información del Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Extraer Información del Email": {
+      "main": [
+        [
+          {
+            "node": "3. Crear Borrador en Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Crear Borrador en Gmail": {
+      "main": [
+        [
+          {
+            "node": "4. Marcar como 'RAG-Processed'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "Email Automation"
+    },
+    {
+      "name": "Seguros"
+    },
+    {
+      "name": "Basico"
+    }
+  ],
+  "meta": {
+    "templateCreatedDate": "2026-08-18"
+  }
+}
