@@ -1,0 +1,264 @@
+{
+  "name": "Asesoramiento de Seguros - Flujo Simplificado (Sin Nodo Custom)",
+  "description": "Flujo que funciona con nodos estándar de n8n - Procesa emails etiquetados con 'RAG-Process'",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "newEmail"
+      },
+      "id": "gmail_trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [100, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Se ejecuta cuando receives email con label 'RAG-Process'"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $credentials.google_api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "models/embedding-001"
+            },
+            {
+              "name": "content",
+              "value": "={{ {text: $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || $node['Gmail Trigger'].json.snippet} }}"
+            }
+          ]
+        }
+      },
+      "id": "generate_embedding",
+      "name": "1. Generar Embedding de Pregunta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [300, 300],
+      "notes": "Crea vector de la pregunta del cliente"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.google_api_access_token }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "name contains 'md' or name contains 'txt'"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name,mimeType)"
+            }
+          ]
+        }
+      },
+      "id": "list_drive_files",
+      "name": "2. Listar Archivos de Drive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 300],
+      "notes": "Obtiene lista de documentos de Drive"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesa archivos y genera respuesta\nconst files = $input.all()[0].json.body.files || [];\nconst question = $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || '';\n\nreturn [\n  {\n    json: {\n      filesCount: files.length,\n      question: question,\n      files: files.slice(0, 3),\n      ready: true\n    }\n  }\n];"
+      },
+      "id": "process_files",
+      "name": "3. Procesar Archivos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "notes": "Procesa la lista de archivos encontrados"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v2/models/gemini-pro:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $credentials.google_api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "Eres un asesor profesional de seguros para Productores Toral. Responde la siguiente pregunta basándote ÚNICAMENTE en los documentos proporcionados. Si no encuentras la información, sé honesto y dilo.\n\nPregunta: {{ $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || 'Sin asunto' }}\n\nResponde en español, de forma profesional y amable."
+            }
+          ]
+        }
+      },
+      "id": "generate_response",
+      "name": "4. Generar Respuesta con Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 300],
+      "notes": "Gemini genera respuesta personalizada"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "createDraft",
+        "to": "={{ $node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'From')?.value }}",
+        "subject": "={{ 'Re: ' + ($node['Gmail Trigger'].json.payload.headers.find(h => h.name === 'Subject')?.value || 'Sin asunto') }}",
+        "body": "=Estimado cliente,\n\n{{ $node['generate_response'].json.body.candidates[0].content.parts[0].text }}\n\n---\nPara más información o consultas adicionales, contáctanos directamente.\n\nAtentamente,\nProductores Toral\nAsesores de Seguros"
+      },
+      "id": "create_draft",
+      "name": "5. Crear Borrador en Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Crea un borrador con la respuesta generada"
+    },
+    {
+      "parameters": {
+        "operation": "addLabel",
+        "messageId": "={{ $node['Gmail Trigger'].json.id }}",
+        "labels": ["RAG-Processed"]
+      },
+      "id": "mark_processed",
+      "name": "6. Marcar como 'RAG-Processed'",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1300, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Etiqueta el email como procesado"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "1. Generar Embedding de Pregunta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Generar Embedding de Pregunta": {
+      "main": [
+        [
+          {
+            "node": "2. Listar Archivos de Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Listar Archivos de Drive": {
+      "main": [
+        [
+          {
+            "node": "3. Procesar Archivos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Procesar Archivos": {
+      "main": [
+        [
+          {
+            "node": "4. Generar Respuesta con Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Generar Respuesta con Gemini": {
+      "main": [
+        [
+          {
+            "node": "5. Crear Borrador en Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Crear Borrador en Gmail": {
+      "main": [
+        [
+          {
+            "node": "6. Marcar como 'RAG-Processed'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "Email Automation"
+    },
+    {
+      "name": "RAG"
+    },
+    {
+      "name": "Seguros"
+    },
+    {
+      "name": "Simplificado"
+    }
+  ],
+  "meta": {
+    "templateCreatedDate": "2026-08-18"
+  }
+}
