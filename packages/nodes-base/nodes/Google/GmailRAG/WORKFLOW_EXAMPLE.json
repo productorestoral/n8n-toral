@@ -1,0 +1,91 @@
+{
+  "name": "Gmail RAG - Atención Automática a Consultas",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d2d9cf4e-bc5e-4f8c-a2c0-38b8b3c5d6e1",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "credentials": {
+        "googleApi": "google_api"
+      }
+    },
+    {
+      "parameters": {
+        "resource": "gmailRag",
+        "operation": "searchAndRespond",
+        "emailId": "={{ $node['Gmail Trigger'].data.id }}",
+        "queryText": "",
+        "searchFolderName": "Documentos_Seguros",
+        "topK": 3,
+        "customPromptContext": "Eres un asesor de seguros profesional para Productores Toral. Responde de manera clara, concisa y profesional basado ÚNICAMENTE en los documentos proporcionados. Si la información no está disponible, indícalo claramente.",
+        "includeSources": true
+      },
+      "id": "a1b2c3d4-e5f6-4g7h-8i9j-0k1l2m3n4o5p",
+      "name": "Gmail RAG Search",
+      "type": "n8n-nodes-base.gmailRag",
+      "typeVersion": 1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "reply",
+        "messageId": "={{ $node['Gmail Trigger'].data.threadId }}",
+        "body": "={{ $node['Gmail RAG Search'].json.answer }}",
+        "replyTo": "={{ $node['Gmail Trigger'].data.payload.headers[0].value }}"
+      },
+      "id": "p5o4n3m2-l1k0-9j8i-7h6g-5f4e3d2c1b0a",
+      "name": "Send Reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [950, 300],
+      "credentials": {
+        "googleApi": "google_api"
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gmail RAG Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail RAG Search": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "8f8f8d8c-7b6a-4f5e-9d8c-7b6a5f4e3d2c",
+  "id": "test_workflow_id",
+  "meta": {
+    "instanceId": "default"
+  },
+  "tags": [
+    {
+      "name": "Email Automation",
+      "id": "tag_001"
+    },
+    {
+      "name": "RAG",
+      "id": "tag_002"
+    }
+  ]
+}
