@@ -1,0 +1,159 @@
+{
+  "name": "Asesoramiento de Seguros - Ejecución Manual con Labels",
+  "description": "Flujo que procesa SOLO los emails que tú etiquetas con 'RAG-Process' - máximo control",
+  "nodes": [
+    {
+      "parameters": {
+        "labelIds": ["RAG-Process"],
+        "returnFormat": "structured"
+      },
+      "id": "gmail_trigger_label",
+      "name": "Gmail - Escuchar Label RAG-Process",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [100, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Se ejecuta SOLO cuando le pones el label 'RAG-Process' a un email"
+    },
+    {
+      "parameters": {
+        "resource": "gmailRag",
+        "operation": "searchAndRespond",
+        "emailId": "={{ $node['Gmail - Escuchar Label RAG-Process'].json.id }}",
+        "queryText": "={{ $node['Gmail - Escuchar Label RAG-Process'].json.payload.headers.find(h => h.name === 'Subject')?.value || $node['Gmail - Escuchar Label RAG-Process'].json.snippet }}",
+        "searchFolderName": "Documentos_Seguros",
+        "topK": 3,
+        "customPromptContext": "Eres un asesor profesional de seguros para Productores Toral. Tu rol es:\n1. Responder preguntas sobre seguros de forma clara y profesional\n2. Basarte ÚNICAMENTE en los documentos proporcionados\n3. Si la información no está en los documentos, ser honesto y decirlo\n4. Mantener un tono amable y profesional\n5. Ofrecer contacto directo si es necesario\n\nSiempre responde en español.",
+        "includeSources": true
+      },
+      "id": "gmail_rag_search",
+      "name": "Generar Respuesta Automática",
+      "type": "n8n-nodes-base.gmailRag",
+      "typeVersion": 1,
+      "position": [350, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Busca respuesta en tus documentos usando embeddings y Gemini"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "createDraft",
+        "to": "={{ $node['Gmail - Escuchar Label RAG-Process'].json.payload.headers.find(h => h.name === 'From')?.value }}",
+        "subject": "={{ 'Re: ' + ($node['Gmail - Escuchar Label RAG-Process'].json.payload.headers.find(h => h.name === 'Subject')?.value || 'Sin asunto') }}",
+        "body": "={{ 'Estimado cliente,\\n\\n' + $node['gmail_rag_search'].json.answer + '\\n\\n---\\nPara más información o consultas adicionales, contáctanos directamente.\\n\\nAtentamente,\\nProductores Toral\\nAsesores de Seguros' }}"
+      },
+      "id": "create_draft",
+      "name": "Crear Borrador (Sin Enviar)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [600, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Crea un borrador en Gmail para que revises antes de enviar"
+    },
+    {
+      "parameters": {
+        "operation": "addLabel",
+        "messageId": "={{ $node['Gmail - Escuchar Label RAG-Process'].json.id }}",
+        "labels": ["RAG-Processed"]
+      },
+      "id": "mark_processed",
+      "name": "Marcar como 'RAG-Processed'",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "credentials": {
+        "googleApi": "google_api_credentials"
+      },
+      "notes": "Etiqueta el email como procesado para no repetir"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "name": "{{ 'Respuesta procesada: ' + ($node['Gmail - Escuchar Label RAG-Process'].json.payload.headers.find(h => h.name === 'From')?.value || 'Unknown') }}",
+        "columns": "{{ ['Timestamp', 'De', 'Asunto', 'Respuesta Propuesta', 'Confianza', 'Documentos Usados', 'Borrador ID', 'Estado'] }}",
+        "data": "={{ [[new Date().toISOString(), $node['Gmail - Escuchar Label RAG-Process'].json.payload.headers.find(h => h.name === 'From')?.value, $node['Gmail - Escuchar Label RAG-Process'].json.payload.headers.find(h => h.name === 'Subject')?.value, $node['gmail_rag_search'].json.answer, $node['gmail_rag_search'].json.confidence, $node['gmail_rag_search'].json.sourcedDocuments.map(d => d.fileName).join(', '), $node['create_draft'].json.id, 'BORRADOR CREADO']] }}"
+      },
+      "id": "log_processed",
+      "name": "Registrar en Auditoría",
+      "type": "n8n-nodes-base.spreadsheet",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "notes": "Registra la respuesta para auditoría y tracking"
+    }
+  ],
+  "connections": {
+    "Gmail - Escuchar Label RAG-Process": {
+      "main": [
+        [
+          {
+            "node": "Generar Respuesta Automática",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Respuesta Automática": {
+      "main": [
+        [
+          {
+            "node": "Crear Borrador (Sin Enviar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Borrador (Sin Enviar)": {
+      "main": [
+        [
+          {
+            "node": "Marcar como 'RAG-Processed'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como 'RAG-Processed'": {
+      "main": [
+        [
+          {
+            "node": "Registrar en Auditoría",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "Email Automation"
+    },
+    {
+      "name": "RAG"
+    },
+    {
+      "name": "Seguros"
+    },
+    {
+      "name": "Ejecución Manual"
+    }
+  ],
+  "meta": {
+    "templateCreatedDate": "2026-08-18"
+  }
+}
